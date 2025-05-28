@@ -11,7 +11,7 @@ struct ContentView: View {
     @Binding var document: MarshlandDocument
 
     var body: some View {
-        Text(document.attributedText.markdownRepresentation)
+        NSTextEditor(attributedText: $document.attributedText)
     }
 }
 
