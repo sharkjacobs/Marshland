@@ -12,8 +12,8 @@ struct NSTextEditor: NSViewRepresentable {
     @Binding var attributedText: NSAttributedString
     var customize: (NSTextView) -> Void = { _ in }
 
-    
     class Coordinator: NSObject, NSTextViewDelegate {
+        let textStorage = TextStorage()
         var field: NSTextEditor?
         
         func textDidChange(_ notification: Notification) {
@@ -21,13 +21,35 @@ struct NSTextEditor: NSViewRepresentable {
             field?.attributedText = textView.attributedString()
         }
         
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+
+            func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.firstLineHeadIndent = 20 * CGFloat(indentation)
+                paragraphStyle.headIndent = 20 * CGFloat(indentation)
+                return paragraphStyle
+            }
+
+            textView.typingAttributes[.paragraphStyle] = paragraphStyle(indentation: (try? textStorage.indentation(at: textView.selectedRange().location)) ?? 0)
+        }
+
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.firstLineHeadIndent = 20 * CGFloat(indentation)
+                paragraphStyle.headIndent = 20 * CGFloat(indentation)
+                return paragraphStyle
+            }
+
             switch commandSelector {
             case #selector( NSResponder.insertTab(_:) ):
-                
+                try? textStorage.indent(range: textView.selectedRange())
+                textView.typingAttributes[.paragraphStyle] = paragraphStyle(indentation: (try? textStorage.indentation(at: textView.selectedRange().location)) ?? 0)
                 return true
             case #selector( NSResponder.insertBacktab(_:) ):
-                
+                try? textStorage.outdent(range: textView.selectedRange())
+                textView.typingAttributes[.paragraphStyle] = paragraphStyle(indentation: (try? textStorage.indentation(at: textView.selectedRange().location)) ?? 0)
                 return true
             default:
                 return false
@@ -51,6 +73,7 @@ struct NSTextEditor: NSViewRepresentable {
         textView.enclosingScrollView?.focusRingType = .exterior
         scrollView.borderType                       = .bezelBorder
         
+        context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
         textView.textStorage?.setAttributedString(attributedText)
         
         customize(textView)
