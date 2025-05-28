@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+import MarkdownAttributedString
 
 extension UTType {
     static var markdown: UTType {
@@ -14,11 +15,13 @@ extension UTType {
     }
 }
 
-struct MarshlandDocument: FileDocument {
-    var text: String
+extension NSAttributedString: @unchecked @retroactive Sendable {}
 
-    init(text: String = "Hello, world!") {
-        self.text = text
+struct MarshlandDocument: FileDocument {
+    var attributedText: NSAttributedString
+
+    init(text: String = "") {
+        self.attributedText = (try? NSAttributedString(markdown: text)) ?? NSAttributedString()
     }
 
     static var readableContentTypes: [UTType] { [.markdown, .plainText] }
@@ -29,11 +32,11 @@ struct MarshlandDocument: FileDocument {
         else {
             throw CocoaError(.fileReadCorruptFile)
         }
-        text = string
+        attributedText = (try? NSAttributedString(markdown: string)) ?? NSAttributedString()
     }
     
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let data = text.data(using: .utf8)!
+        let data = attributedText.markdownRepresentation.data(using: .utf8)!
         return .init(regularFileWithContents: data)
     }
 }
