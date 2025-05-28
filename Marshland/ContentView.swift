@@ -8,13 +8,9 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Binding var document: MarshlandDocument
+    @ObservedObject var document: MarshlandDocument
 
     var body: some View {
         NSTextEditor(attributedText: $document.attributedText)
     }
-}
-
-#Preview {
-    ContentView(document: .constant(MarshlandDocument()))
 }

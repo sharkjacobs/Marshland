@@ -15,18 +15,18 @@ extension UTType {
     }
 }
 
-extension NSAttributedString: @unchecked @retroactive Sendable {}
-
-struct MarshlandDocument: FileDocument {
-    var attributedText: NSAttributedString
-
+class MarshlandDocument: ReferenceFileDocument {
+    typealias Snapshot = NSAttributedString
+    
+    @Published var attributedText: NSAttributedString
+    
     init(text: String = "") {
         self.attributedText = (try? NSAttributedString(markdown: text)) ?? NSAttributedString()
     }
 
     static var readableContentTypes: [UTType] { [.markdown, .plainText] }
 
-    init(configuration: ReadConfiguration) throws {
+    required init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents,
               let string = String(data: data, encoding: .utf8)
         else {
@@ -35,8 +35,16 @@ struct MarshlandDocument: FileDocument {
         attributedText = (try? NSAttributedString(markdown: string)) ?? NSAttributedString()
     }
     
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let data = attributedText.markdownRepresentation.data(using: .utf8)!
+    func snapshot(contentType: UTType) throws -> NSAttributedString {
+        return self.attributedText
+    }
+    
+    func fileWrapper(
+        snapshot: NSAttributedString,
+        configuration: WriteConfiguration
+    ) throws -> FileWrapper {
+        let data = snapshot.markdownRepresentation.data(using: .utf8)!
+
         return .init(regularFileWithContents: data)
     }
 }

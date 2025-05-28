@@ -10,8 +10,12 @@ import SwiftUI
 @main
 struct MarshlandApp: App {
     var body: some Scene {
-        DocumentGroup(newDocument: MarshlandDocument()) { file in
-            ContentView(document: file.$document)
-        }
+        DocumentGroup(
+            newDocument: {
+                MarshlandDocument()
+            }, editor: { file in
+                ContentView(document: file.document)
+            }
+        )
     }
 }
