@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BFD8254C2DE69AC800914255 /* MarkdownAttributedString in Frameworks */ = {isa = PBXBuildFile; productRef = BFD8254B2DE69AC800914255 /* MarkdownAttributedString */; };
 		BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */ = {isa = PBXBuildFile; productRef = BFD8255D2DE6BCF900914255 /* TendrilTree */; };
 /* End PBXBuildFile section */
 
@@ -70,7 +69,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BFD8254C2DE69AC800914255 /* MarkdownAttributedString in Frameworks */,
 				BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -132,7 +130,6 @@
 			);
 			name = Marshland;
 			packageProductDependencies = (
-				BFD8254B2DE69AC800914255 /* MarkdownAttributedString */,
 				BFD8255D2DE6BCF900914255 /* TendrilTree */,
 			);
 			productName = Marshland;
@@ -218,7 +215,6 @@
 			mainGroup = BFD824F12DE63C4A00914255;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				BFD8254A2DE69AC800914255 /* XCRemoteSwiftPackageReference "MarkdownAttributedString" */,
 				BFD8255C2DE6BCF900914255 /* XCLocalSwiftPackageReference "../TendrilTree" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -587,23 +583,7 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		BFD8254A2DE69AC800914255 /* XCRemoteSwiftPackageReference "MarkdownAttributedString" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/vincode-io/MarkdownAttributedString";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
-		BFD8254B2DE69AC800914255 /* MarkdownAttributedString */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = BFD8254A2DE69AC800914255 /* XCRemoteSwiftPackageReference "MarkdownAttributedString" */;
-			productName = MarkdownAttributedString;
-		};
 		BFD8255D2DE6BCF900914255 /* TendrilTree */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TendrilTree;

@@ -7,7 +7,6 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
-import MarkdownAttributedString
 
 extension UTType {
     static var markdown: UTType {
@@ -21,7 +20,11 @@ class MarshlandDocument: ReferenceFileDocument {
     @Published var attributedText: NSAttributedString
     
     init(text: String = "") {
-        self.attributedText = (try? NSAttributedString(markdown: text)) ?? NSAttributedString()
+        self.attributedText = NSAttributedString(string: text,
+                                                 attributes: [
+                                                    .foregroundColor: NSColor.labelColor,
+                                                    .font: NSFont.preferredFont(forTextStyle: .body)
+                                                 ])
     }
 
     static var readableContentTypes: [UTType] { [.markdown, .plainText] }
@@ -32,7 +35,11 @@ class MarshlandDocument: ReferenceFileDocument {
         else {
             throw CocoaError(.fileReadCorruptFile)
         }
-        attributedText = (try? NSAttributedString(markdown: string)) ?? NSAttributedString()
+        self.attributedText = NSAttributedString(string: string,
+                                                 attributes: [
+                                                    .foregroundColor: NSColor.labelColor,
+                                                    .font: NSFont.preferredFont(forTextStyle: .body)
+                                                 ])
     }
     
     func snapshot(contentType: UTType) throws -> NSAttributedString {
@@ -43,8 +50,8 @@ class MarshlandDocument: ReferenceFileDocument {
         snapshot: NSAttributedString,
         configuration: WriteConfiguration
     ) throws -> FileWrapper {
-        let data = snapshot.markdownRepresentation.data(using: .utf8)!
-
+        let data = snapshot.string.data(using: .utf8)!
+        
         return .init(regularFileWithContents: data)
     }
 }
