@@ -9,6 +9,7 @@ import AppKit
 import TendrilTree
 
 class TextStorage: NSTextStorage, @unchecked Sendable {
+    private var stringStorage: String?
     private var attrStorage: NSMutableAttributedString = NSMutableAttributedString()
     private var tendrilTree: TendrilTree = TendrilTree()
 
@@ -26,6 +27,7 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
             super.init()
             self.attrStorage = NSMutableAttributedString(attributedString: attributedString)
             self.tendrilTree = TendrilTree(content: attributedString.string)
+            self.stringStorage = tendrilTree.string
         } else {
             return nil
         }
@@ -34,26 +36,18 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     // MARK: - NSTextStorage Overrides
 
     override var string: String {
-        return tendrilTree.string
+        if stringStorage == nil {
+            stringStorage = tendrilTree.string
+        }
+        return stringStorage!
     }
     
     override func attributes(at location: Int, effectiveRange range: NSRangePointer?) -> [NSAttributedString.Key : Any] {
-        let effectiveLocation = min(location, attrStorage.length > 0 ? attrStorage.length - 1 : 0)
-        if attrStorage.length > 0 {
-            return attrStorage.attributes(at: effectiveLocation, effectiveRange: range)
-        } else {
-            // Default attributes if the underlying attributed string is empty
-            if let ptr = range {
-                ptr.pointee = NSRange(location: 0, length: 0)
-            }
-            return [
-                .font : NSFont.preferredFont(forTextStyle: .body),
-                .foregroundColor: NSColor.labelColor
-            ]
-        }
+        return attrStorage.attributes(at: location, effectiveRange: range)
     }
 
     override func replaceCharacters(in range: NSRange, with str: String) {
+        stringStorage = nil
         beginEditing()
         attrStorage.replaceCharacters(in: range, with: str)
         do {
@@ -62,10 +56,10 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
         } catch {
             print("Error updating tree: \(error)")
         }
-        let delta = str.utf16.count - range.length
         
         updateIndentationOf(range: NSRange(location: range.location, length: str.utf16.count))
 
+        let delta = str.utf16.count - range.length
         edited([.editedCharacters, .editedAttributes], range: range, changeInLength: delta) // Also notify attribute changes if structure implies it.
         endEditing()
     }
@@ -106,10 +100,12 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     }
     
     func collapse(range: NSRange) throws {
+        stringStorage = nil
         try tendrilTree.collapse(range: range)
     }
     
     func expand(range: NSRange) throws {
+        stringStorage = nil
         try tendrilTree.expand(range: range)
     }
 }
@@ -134,5 +130,4 @@ extension TextStorage {
             attrStorage.addAttribute(.paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange)
         }
     }
-
 }
