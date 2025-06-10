@@ -13,7 +13,8 @@ struct MarshlandApp: App {
         DocumentGroup(
             newDocument: {
                 MarshlandDocument()
-            }, editor: { file in
+            },
+            editor: { file in
                 ContentView(document: file.document)
             }
         )

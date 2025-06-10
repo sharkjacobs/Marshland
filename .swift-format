@@ -1,0 +1,8 @@
+{
+  "indentation" : {
+    "spaces" : 4
+  },
+  "tabWidth" : 4,
+  "NeverUseForceTry" : true,
+  "OneVariableDeclarationPerLine" : false
+}
