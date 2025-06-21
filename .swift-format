@@ -3,6 +3,9 @@
     "spaces" : 4
   },
   "tabWidth" : 4,
-  "NeverUseForceTry" : true,
-  "OneVariableDeclarationPerLine" : false
+  "lineLength" : 130,
+  "rules": {
+    "NeverUseForceTry" : true,
+    "OneVariableDeclarationPerLine" : false,
+  },
 }
