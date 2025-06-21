@@ -18,10 +18,8 @@ import SwiftAnthropic
     var cacheTokenRead: Int = 0
     var cacheTokenWrite: Int = 0
 
-    /// We hold a weak reference to avoid retain cycles.
     private weak var textView: NSTextView?
 
-    /// Call this as soon as your view is up (from onTextViewCreated).
     func register(textView: NSTextView) {
         self.textView = textView
     }
@@ -42,11 +40,13 @@ import SwiftAnthropic
     }
 
     func respond() {
-        guard let prompt = getPromptText() else { return }
+        guard
+            let prompt = getPromptText(),
+            let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey")
+        else { return }
 
         let parameters = prompt.toAnthropicParameters()
 
-        let anthropicApiKey = ""
         let betaHeaders = ["prompt-caching-2024-07-31"]
         let service = AnthropicServiceFactory.service(apiKey: anthropicApiKey, betaHeaders: betaHeaders)
 
@@ -94,8 +94,9 @@ private extension NSTextView {
 
 private extension String {
     func toAnthropicParameters() -> MessageParameter {
+
         var messages: [MessageParameter.Message] = []
-        var systemPrompt: String?
+        var systemPrompt: String? = UserDefaults.standard.string(forKey: "systemMessage")
         let userPrefix = "user: "
         let systemPrefix = "system: "
 
@@ -126,8 +127,21 @@ private extension String {
             }
         }
 
+        let model: SwiftAnthropic.Model = {
+            switch UserDefaults.standard.string(forKey: "model") {
+            case "claude-3-opus": return .claude3Opus
+            case "claude-3-5-sonnet": return .claude35Sonnet
+            case "claude-3-7-sonnet": return .claude37Sonnet
+            case "claude-3-haiku": return .claude3Haiku
+            case "claude-3-5-haiku": return .claude35Haiku
+            case "claude-4-sonnet": return .other("claude-sonnet-4-0")
+            case "claude-4-opus": return .other("claude-opus-4-0")
+            default: return .claude37Sonnet
+            }
+        }()
+
         return MessageParameter(
-            model: .claude35Sonnet,
+            model: model,
             messages: messages,
             maxTokens: 2048,
             system: .text(systemPrompt ?? ""),

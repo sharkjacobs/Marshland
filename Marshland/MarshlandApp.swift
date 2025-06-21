@@ -18,5 +18,9 @@ struct MarshlandApp: App {
                 ContentView(document: file.document)
             }
         )
+        Settings {
+            SettingsView()
+                .frame(width: 500)
+        }
     }
 }
