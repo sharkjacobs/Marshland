@@ -26,9 +26,13 @@ struct NSTextEditor: NSViewRepresentable {
             guard let textView = notification.object as? NSTextView else { return }
 
             func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+                let baseIndentation = 15
+                let indentSize = 20
+                let indent = CGFloat(baseIndentation + indentSize * indentation)
+
                 let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.firstLineHeadIndent = 20 * CGFloat(indentation)
-                paragraphStyle.headIndent = 20 * CGFloat(indentation)
+                paragraphStyle.firstLineHeadIndent = indent
+                paragraphStyle.headIndent = indent
                 return paragraphStyle
             }
 
