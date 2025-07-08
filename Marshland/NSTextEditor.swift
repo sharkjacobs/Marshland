@@ -86,6 +86,7 @@ struct NSTextEditor: NSViewRepresentable {
 
         context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
         context.coordinator.textStorage.setAttributedString(attributedText)
+        context.coordinator.textStorage.updateIndentationOf(range: NSRange(location: 0, length: attributedText.length))
 
         customize(textView)
 

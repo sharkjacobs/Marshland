@@ -9,110 +9,110 @@ import AppKit
 import TendrilTree
 
 class TextStorage: NSTextStorage, @unchecked Sendable {
-    private var stringStorage: String?
-    private var attrStorage: NSMutableAttributedString = NSMutableAttributedString()
-    private var tendrilTree: TendrilTree = TendrilTree()
+    private var backingStorage: NSTextStorage
+    private var tendrilTree: TendrilTree
 
-    override init() {
+    init(tendrilTree: TendrilTree = TendrilTree()) {
+        self.tendrilTree = tendrilTree
+        self.backingStorage = NSTextStorage()
         super.init()
     }
 
-    // Required NSCoding initializers
-    required init?(coder: NSCoder) {
+    required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    required init?(
-        pasteboardPropertyList propertyList: Any, ofType type: NSPasteboard.PasteboardType
-    ) {
-        if let attributedString = NSAttributedString(
-            pasteboardPropertyList: propertyList, ofType: type)
-        {
-            super.init()
-            self.attrStorage = NSMutableAttributedString(attributedString: attributedString)
-            self.tendrilTree = TendrilTree(content: attributedString.string)
-            self.stringStorage = tendrilTree.string
-        } else {
-            return nil
-        }
+    required init?(pasteboardPropertyList _: Any, ofType _: NSPasteboard.PasteboardType) {
+        fatalError("init(pasteboardPropertyList:ofType:) has not been implemented")
     }
 
     // MARK: - NSTextStorage Overrides
 
     override var string: String {
-        if stringStorage == nil {
-            stringStorage = tendrilTree.string
-        }
-        return stringStorage!
+        return backingStorage.string
+    }
+
+    override var length: Int {
+        return backingStorage.length
     }
 
     override func attributes(at location: Int, effectiveRange range: NSRangePointer?)
         -> [NSAttributedString.Key: Any]
     {
-        return attrStorage.attributes(at: location, effectiveRange: range)
+        return backingStorage.attributes(at: location, effectiveRange: range)
     }
 
     override func replaceCharacters(in range: NSRange, with str: String) {
-        stringStorage = nil
         beginEditing()
+
+        var insertionLength = 0
+        var deletionLength = 0
         do {
-            try tendrilTree.delete(range: range)
-            try tendrilTree.insert(content: str, at: range.location)
+            try tendrilTree.delete(range: range) { _, range in
+                self.backingStorage.replaceCharacters(in: range, with: "")
+                deletionLength += range.length
+            }
+            try tendrilTree.insert(content: str, at: range.location) { insertion, range in
+                self.backingStorage.replaceCharacters(in: range, with: insertion)
+                insertionLength += insertion.utf16.count
+                deletionLength += range.length
+            }
         } catch {
             print("Error updating tree: \(error)")
         }
 
-        attrStorage.replaceCharacters(in: range, with: str)
-        updateIndentationOf(range: NSRange(location: range.location, length: str.utf16.count))
+        //        updateIndentationOf(NSRange(location: range.location, length: insertionLength))
 
-        let delta = str.utf16.count - range.length
-        // Also notify attribute changes if structure implies it.
-        edited([.editedCharacters, .editedAttributes], range: range, changeInLength: delta)
+        edited([.editedCharacters], range: range, changeInLength: insertionLength - deletionLength)
         endEditing()
     }
 
-    override func setAttributes(_ attrs: [NSAttributedString.Key: Any]?, range: NSRange) {
-        beginEditing()
-        attrStorage.setAttributes(attrs, range: range)
+    override open func invalidateAttributes(in range: NSRange) {
+        backingStorage.invalidateAttributes(in: (string as NSString).paragraphRange(for: range))
+    }
+
+    override open func ensureAttributesAreFixed(in range: NSRange) {
+        backingStorage.ensureAttributesAreFixed(in: range)
+    }
+
+    override open func setAttributes(_ attrs: [NSAttributedString.Key: Any]?, range: NSRange) {
+        backingStorage.setAttributes(attrs, range: range)
+
         edited(.editedAttributes, range: range, changeInLength: 0)
-        endEditing()
     }
 
-    override func attributedSubstring(from range: NSRange) -> NSAttributedString {
-        // Ensure range is within bounds of the impl string
-        if range.location >= attrStorage.length {
-            return NSAttributedString()  // Return empty if range starts beyond current length
-        }
-        let effectiveLength = min(range.length, attrStorage.length - range.location)
-        let effectiveRange = NSRange(location: range.location, length: effectiveLength)
-
-        if effectiveRange.length <= 0 {  // Also handle if effective length became zero or negative
-            return NSAttributedString()
-        }
-        return attrStorage.attributedSubstring(from: effectiveRange)
+    override open func addAttribute(_ name: NSAttributedString.Key, value: Any, range: NSRange) {
+        backingStorage.addAttribute(name, value: value, range: range)
+        edited(.editedAttributes, range: range, changeInLength: 0)
     }
 
+    override open func addAttributes(_ attrs: [NSAttributedString.Key: Any], range: NSRange) {
+        backingStorage.addAttributes(attrs, range: range)
+        edited(.editedAttributes, range: range, changeInLength: 0)
+    }
+
+    override open var fixesAttributesLazily: Bool {
+        return backingStorage.fixesAttributesLazily
+    }
     // MARK: - TendrilTree Indentation
 
     func indent(range: NSRange) throws {
         try tendrilTree.indent(range: range)
         updateIndentationOf(range: range)
-        edited([.editedCharacters, .editedAttributes], range: range, changeInLength: 0)
+        edited([.editedAttributes], range: range, changeInLength: 0)
     }
 
     func outdent(range: NSRange) throws {
         try tendrilTree.outdent(range: range)
         updateIndentationOf(range: range)
-        edited([.editedCharacters, .editedAttributes], range: range, changeInLength: 0)
+        edited([.editedAttributes], range: range, changeInLength: 0)
     }
 
     func collapse(range: NSRange) throws {
-        stringStorage = nil
         try tendrilTree.collapse(range: range)
     }
 
     func expand(range: NSRange) throws {
-        stringStorage = nil
         try tendrilTree.expand(range: range)
     }
 }
@@ -124,7 +124,7 @@ extension TextStorage {
 }
 
 extension TextStorage {
-    private func updateIndentationOf(range: NSRange) {
+    func updateIndentationOf(range: NSRange) {
         func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
             let baseIndentation = 15
             let indentSize = 20
