@@ -17,9 +17,7 @@ struct NSTextEditor: NSViewRepresentable {
         var field: NSTextEditor?
 
         func textDidChange(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else { return }
-            field?.attributedText = textView.attributedString()
-            //            field?.attributedText = NSAttributedString(string: textStorage.fileString)
+            field?.attributedText = NSAttributedString(string: textStorage.fileString)
         }
 
         private func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
@@ -78,24 +76,24 @@ struct NSTextEditor: NSViewRepresentable {
         scrollView.borderType = .bezelBorder
 
         context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
-        context.coordinator.textStorage.setAttributedString(attributedText)
-        context.coordinator.textStorage.updateIndentationOf(range: NSRange(location: 0, length: attributedText.length))
 
         customize(textView)
+
+        textView.string = attributedText.string
+        context.coordinator.textStorage.updateIndentationOf(range: NSRange(location: 0, length: textView.string.utf16.count))
 
         return scrollView
     }
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
-        context.coordinator.field = self
-        guard let textView = nsView.documentView as? NSTextView else { return }
-
-        textView.delegate = context.coordinator
-        if textView.string != attributedText.string {
-            let range = textView.selectedRange()
-            textView.textStorage?.setAttributedString(attributedText)
-            textView.setSelectedRange(range)
-        }
+        //        context.coordinator.field = self
+        //        guard let textView = nsView.documentView as? NSTextView else { return }
+        //
+        //        textView.delegate = context.coordinator
+        //        if textView.string != attributedText.string {
+        //            let range = textView.selectedRange()
+        //            textView.textStorage?.setAttributedString(attributedText)
+        //            textView.setSelectedRange(range)
+        //        }
     }
-
 }

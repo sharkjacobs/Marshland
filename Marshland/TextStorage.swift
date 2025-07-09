@@ -61,14 +61,15 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
             print("Error updating tree: \(error)")
         }
 
-        //        updateIndentationOf(NSRange(location: range.location, length: insertionLength))
+        updateIndentationOf(range: NSRange(location: range.location, length: insertionLength))
 
         edited([.editedCharacters], range: range, changeInLength: insertionLength - deletionLength)
         endEditing()
     }
 
     override open func invalidateAttributes(in range: NSRange) {
-        backingStorage.invalidateAttributes(in: (string as NSString).paragraphRange(for: range))
+        let r = NSRange(location: range.location, length: min(range.length, backingStorage.length - range.location))
+        backingStorage.invalidateAttributes(in: r)
     }
 
     override open func ensureAttributesAreFixed(in range: NSRange) {
@@ -76,9 +77,10 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     }
 
     override open func setAttributes(_ attrs: [NSAttributedString.Key: Any]?, range: NSRange) {
-        backingStorage.setAttributes(attrs, range: range)
+        let r = NSRange(location: range.location, length: min(range.length, backingStorage.length - range.location))
+        backingStorage.setAttributes(attrs, range: r)
 
-        edited(.editedAttributes, range: range, changeInLength: 0)
+        edited(.editedAttributes, range: r, changeInLength: 0)
     }
 
     override open func addAttribute(_ name: NSAttributedString.Key, value: Any, range: NSRange) {
@@ -99,13 +101,11 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     func indent(range: NSRange) throws {
         try tendrilTree.indent(range: range)
         updateIndentationOf(range: range)
-        edited([.editedAttributes], range: range, changeInLength: 0)
     }
 
     func outdent(range: NSRange) throws {
         try tendrilTree.outdent(range: range)
         updateIndentationOf(range: range)
-        edited([.editedAttributes], range: range, changeInLength: 0)
     }
 
     func collapse(range: NSRange) throws {
@@ -114,6 +114,10 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
 
     func expand(range: NSRange) throws {
         try tendrilTree.expand(range: range)
+    }
+
+    override func processEditing() {
+        super.processEditing()
     }
 }
 
@@ -138,7 +142,9 @@ extension TextStorage {
 
         tendrilTree.enumerateLines(in: range) { content, lineRange, indentation in
             backingStorage.addAttribute(
-                .paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange)
+                .paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange
+            )
+            edited(.editedAttributes, range: lineRange, changeInLength: 0)
         }
     }
 }
