@@ -14,7 +14,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            NSTextEditor(attributedText: $document.attributedText) {
+            NSTextEditor(text: $document.text) {
                 llm.register(textView: $0)
             }
             if #available(macOS 26.0, *) {

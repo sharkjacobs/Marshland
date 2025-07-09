@@ -9,7 +9,7 @@ import AppKit
 import SwiftUI
 
 struct NSTextEditor: NSViewRepresentable {
-    @Binding var attributedText: NSAttributedString
+    @Binding var text: String
     var customize: (NSTextView) -> Void = { _ in }
 
     class Coordinator: NSObject, NSTextViewDelegate {
@@ -17,7 +17,7 @@ struct NSTextEditor: NSViewRepresentable {
         var field: NSTextEditor?
 
         func textDidChange(_ notification: Notification) {
-            field?.attributedText = NSAttributedString(string: textStorage.fileString)
+            field?.text = textStorage.fileString
         }
 
         private func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
@@ -79,20 +79,18 @@ struct NSTextEditor: NSViewRepresentable {
 
         customize(textView)
 
-        textView.string = attributedText.string
+        textView.string = text
         context.coordinator.textStorage.updateIndentationOf(range: NSRange(location: 0, length: textView.string.utf16.count))
 
         return scrollView
     }
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
-        //        context.coordinator.field = self
         //        guard let textView = nsView.documentView as? NSTextView else { return }
         //
-        //        textView.delegate = context.coordinator
-        //        if textView.string != attributedText.string {
+        //        if textView.string != text {
         //            let range = textView.selectedRange()
-        //            textView.textStorage?.setAttributedString(attributedText)
+        //            textView.string = text
         //            textView.setSelectedRange(range)
         //        }
     }

@@ -15,17 +15,12 @@ extension UTType {
 }
 
 class MarshlandDocument: ReferenceFileDocument {
-    typealias Snapshot = NSAttributedString
+    typealias Snapshot = String
 
-    @Published var attributedText: NSAttributedString
+    @Published var text: String
 
     init(text: String = "") {
-        self.attributedText = NSAttributedString(
-            string: text,
-            attributes: [
-                .foregroundColor: NSColor.labelColor,
-                .font: NSFont.preferredFont(forTextStyle: .body),
-            ])
+        self.text = text
     }
 
     static var readableContentTypes: [UTType] { [.markdown, .plainText] }
@@ -36,23 +31,18 @@ class MarshlandDocument: ReferenceFileDocument {
         else {
             throw CocoaError(.fileReadCorruptFile)
         }
-        self.attributedText = NSAttributedString(
-            string: string,
-            attributes: [
-                .foregroundColor: NSColor.labelColor,
-                .font: NSFont.preferredFont(forTextStyle: .body),
-            ])
+        self.text = string
     }
 
-    func snapshot(contentType: UTType) throws -> NSAttributedString {
-        return self.attributedText
+    func snapshot(contentType: UTType) throws -> String {
+        return self.text
     }
 
     func fileWrapper(
-        snapshot: NSAttributedString,
+        snapshot: String,
         configuration: WriteConfiguration
     ) throws -> FileWrapper {
-        let data = snapshot.string.data(using: .utf8)!
+        let data = snapshot.data(using: .utf8)!
 
         return .init(regularFileWithContents: data)
     }
