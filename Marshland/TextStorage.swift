@@ -61,7 +61,7 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
             print("Error updating tree: \(error)")
         }
 
-        updateIndentationOf(range: NSRange(location: range.location, length: insertionLength))
+        updateIndentationOfAttribute(for: NSRange(location: range.location, length: insertionLength))
 
         edited([.editedCharacters], range: range, changeInLength: insertionLength - deletionLength)
         endEditing()
@@ -98,14 +98,14 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     }
     // MARK: - TendrilTree Indentation
 
-    func indent(range: NSRange) throws {
-        try tendrilTree.indent(range: range)
-        updateIndentationOf(range: range)
+    func indent(range: NSRange, callback: ([NSRange]) -> Void) throws {
+        try tendrilTree.indent(range: range) { callback($0) }
+        updateIndentationOfAttribute(for: range)
     }
 
-    func outdent(range: NSRange) throws {
-        try tendrilTree.outdent(range: range)
-        updateIndentationOf(range: range)
+    func outdent(range: NSRange, callback: ([NSRange]) -> Void) throws {
+        try tendrilTree.outdent(range: range) { callback($0) }
+        updateIndentationOfAttribute(for: range)
     }
 
     func collapse(range: NSRange) throws {
@@ -128,7 +128,7 @@ extension TextStorage {
 }
 
 extension TextStorage {
-    func updateIndentationOf(range: NSRange) {
+    func updateIndentationOfAttribute(for range: NSRange) {
         func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
             let baseIndentation = 15
             let indentSize = 20

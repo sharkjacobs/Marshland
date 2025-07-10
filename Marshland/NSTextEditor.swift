@@ -12,50 +12,21 @@ struct NSTextEditor: NSViewRepresentable {
     @Binding var text: String
     var customize: (NSTextView) -> Void = { _ in }
 
-    class Coordinator: NSObject, NSTextViewDelegate {
+    class Coordinator: NSObject {
         let textStorage = TextStorage()
         var field: NSTextEditor?
-
-        func textDidChange(_ notification: Notification) {
-            field?.text = textStorage.fileString
-        }
-
-        private func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
-            let baseIndentation = 15
-            let indentSize = 20
-            let indent = CGFloat(baseIndentation + indentSize * indentation)
-
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.firstLineHeadIndent = indent
-            paragraphStyle.headIndent = indent
-            return paragraphStyle
-        }
-
-        func textViewDidChangeSelection(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else { return }
-
-            if let indentation = try? textStorage.indentation(at: textView.selectedRange().location) {
+        private var indentationDepth: Int = 0
+        private func updateIndentationOfTypingAttributes(in textView: NSTextView) {
+            if let indentation = try? textStorage.indentation(at: textView.selectedRange().location),
+                indentation != indentationDepth
+            {
+                indentationDepth = indentation
                 textView.typingAttributes[.paragraphStyle] = paragraphStyle(indentation: indentation)
             }
         }
 
-        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-            switch commandSelector {
-            case #selector(NSResponder.insertTab(_:)):
-                try? textStorage.indent(range: textView.selectedRange())
-                if let indentation = try? textStorage.indentation(at: textView.selectedRange().location) {
-                    textView.typingAttributes[.paragraphStyle] = paragraphStyle(indentation: indentation)
-                }
-                return true
-            case #selector(NSResponder.insertBacktab(_:)):
-                try? textStorage.outdent(range: textView.selectedRange())
-                if let indentation = try? textStorage.indentation(at: textView.selectedRange().location) {
-                    textView.typingAttributes[.paragraphStyle] = paragraphStyle(indentation: indentation)
-                }
-                return true
-            default:
-                return false
-            }
+        func textDidChange(_ notification: Notification) {
+            field?.text = textStorage.fileString
         }
 
         init(field: NSTextEditor) { self.field = field }
@@ -80,7 +51,8 @@ struct NSTextEditor: NSViewRepresentable {
         customize(textView)
 
         textView.string = text
-        context.coordinator.textStorage.updateIndentationOf(range: NSRange(location: 0, length: textView.string.utf16.count))
+        context.coordinator.textStorage.updateIndentationOfAttribute(
+            for: NSRange(location: 0, length: textView.string.utf16.count))
 
         return scrollView
     }
@@ -93,5 +65,75 @@ struct NSTextEditor: NSViewRepresentable {
         //            textView.string = text
         //            textView.setSelectedRange(range)
         //        }
+    }
+}
+
+// MARK: - NSTextViewDelegate
+
+extension NSTextEditor.Coordinator: NSTextViewDelegate {
+    private func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+        let baseIndentation = 15
+        let indentSize = 20
+        let indent = CGFloat(baseIndentation + indentSize * indentation)
+
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.firstLineHeadIndent = indent
+        paragraphStyle.headIndent = indent
+        return paragraphStyle
+    }
+
+    func textViewDidChangeSelection(_ notification: Notification) {
+        guard let textView = notification.object as? NSTextView else { return }
+
+        updateIndentationOfTypingAttributes(in: textView)
+    }
+
+    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        switch commandSelector {
+        case #selector(NSResponder.insertTab(_:)):
+            indent([textView.selectedRange()], in: textView)
+            return true
+        case #selector(NSResponder.insertBacktab(_:)):
+            outdent([textView.selectedRange()], in: textView)
+            return true
+        default:
+            return false
+        }
+    }
+
+    func indent(_ ranges: [NSRange], in textView: NSTextView) {
+        var undoRanges = [NSRange]()
+        for range in ranges {
+            try? textStorage.indent(range: range) {
+                undoRanges.append(contentsOf: $0)
+            }
+        }
+        updateIndentationOfTypingAttributes(in: textView)
+        field?.text = textStorage.fileString
+        registerUndoForIndent(undoRanges, in: textView)
+    }
+
+    func outdent(_ ranges: [NSRange], in textView: NSTextView) {
+        var undoRanges = [NSRange]()
+        for range in ranges {
+            try? textStorage.outdent(range: range) {
+                undoRanges.append(contentsOf: $0)
+            }
+        }
+        updateIndentationOfTypingAttributes(in: textView)
+        field?.text = textStorage.fileString
+        registerUndoForOutdent(undoRanges, in: textView)
+    }
+
+    func registerUndoForIndent(_ ranges: [NSRange], in textView: NSTextView) {
+        textView.undoManager?.registerUndo(withTarget: self) { target in
+            target.outdent(ranges, in: textView)
+        }
+    }
+
+    func registerUndoForOutdent(_ ranges: [NSRange], in textView: NSTextView) {
+        textView.undoManager?.registerUndo(withTarget: self) { target in
+            target.indent(ranges, in: textView)
+        }
     }
 }
