@@ -19,6 +19,11 @@ import TendrilTree
     var cacheTokenRead: Int = 0
     var cacheTokenWrite: Int = 0
 
+    var messages: [Message] = []
+    func reloadMessages() {
+        messages = textStorage?.messages() ?? []
+    }
+
     private weak var textView: NSTextView?
     private var textStorage: TextStorage? {
         textView?.layoutManager?.textStorage as? TextStorage
@@ -40,7 +45,7 @@ import TendrilTree
 
     func respond() {
         guard
-            let messages = try? textStorage?.messages(),
+            let messages = textStorage?.messages(),
             let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey")
         else { return }
 
@@ -54,6 +59,7 @@ import TendrilTree
 
             defer {
                 isResponding = false
+                reloadMessages()
             }
 
             let stream = try await service.streamMessage(parameters)
