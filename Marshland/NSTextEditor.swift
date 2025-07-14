@@ -15,14 +15,27 @@ struct NSTextEditor: NSViewRepresentable {
     class Coordinator: NSObject {
         let textStorage = TextStorage()
         var field: NSTextEditor?
-        private var indentationDepth: Int = 0
+        private var indentationDepth: Int?
+        private var typingAttributesParagraphStyle: NSParagraphStyle?
         private func updateIndentationOfTypingAttributes(in textView: NSTextView) {
+            func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+                let baseIndentation = 15
+                let indentSize = 20
+                let indent = CGFloat(baseIndentation + indentSize * indentation)
+
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.firstLineHeadIndent = indent
+                paragraphStyle.headIndent = indent
+                return paragraphStyle
+            }
+
             if let indentation = try? textStorage.indentation(at: textView.selectedRange().location),
                 indentation != indentationDepth
             {
                 indentationDepth = indentation
-                textView.typingAttributes[.paragraphStyle] = paragraphStyle(indentation: indentation)
+                typingAttributesParagraphStyle = paragraphStyle(indentation: indentation)
             }
+            textView.typingAttributes[.paragraphStyle] = typingAttributesParagraphStyle
         }
 
         func textDidChange(_ notification: Notification) {
@@ -71,17 +84,6 @@ struct NSTextEditor: NSViewRepresentable {
 // MARK: - NSTextViewDelegate
 
 extension NSTextEditor.Coordinator: NSTextViewDelegate {
-    private func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
-        let baseIndentation = 15
-        let indentSize = 20
-        let indent = CGFloat(baseIndentation + indentSize * indentation)
-
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.firstLineHeadIndent = indent
-        paragraphStyle.headIndent = indent
-        return paragraphStyle
-    }
-
     func textViewDidChangeSelection(_ notification: Notification) {
         guard let textView = notification.object as? NSTextView else { return }
 
