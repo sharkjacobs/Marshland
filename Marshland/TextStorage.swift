@@ -156,3 +156,11 @@ extension TextStorage {
         return tendrilTree.fileString
     }
 }
+
+// MARK: - Messages
+
+extension TextStorage {
+    func messages() throws -> [Message] {
+        tendrilTree.messages()
+    }
+}

@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 import SwiftAnthropic
+import TendrilTree
 
 /// A simple ObservableObject that can be registered with your
 /// NSSlopeTextView and driven from a SwiftUI Button or hotkey.
@@ -19,14 +20,12 @@ import SwiftAnthropic
     var cacheTokenWrite: Int = 0
 
     private weak var textView: NSTextView?
+    private var textStorage: TextStorage? {
+        textView?.layoutManager?.textStorage as? TextStorage
+    }
 
     func register(textView: NSTextView) {
         self.textView = textView
-    }
-
-    /// Grab everything up to the current insertion point.
-    private func getPromptText() -> String? {
-        return textView?.getTextUpToCursor()
     }
 
     /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
@@ -41,11 +40,11 @@ import SwiftAnthropic
 
     func respond() {
         guard
-            let prompt = getPromptText(),
+            let messages = try? textStorage?.messages(),
             let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey")
         else { return }
 
-        let parameters = prompt.toAnthropicParameters()
+        let parameters = messages.toAnthropicParameters()
 
         let betaHeaders = ["prompt-caching-2024-07-31"]
         let service = AnthropicServiceFactory.service(apiKey: anthropicApiKey, betaHeaders: betaHeaders)
@@ -81,49 +80,25 @@ import SwiftAnthropic
 }
 
 private extension NSTextView {
-    func getTextUpToCursor() -> String? {
-        guard let string = self.string as NSString? else { return nil }
-        let startIndex = self.selectedRange.lowerBound
-        return string.substring(with: NSRange(location: 0, length: startIndex))
-    }
-
     func insertAttributedAIResponse(_ response: NSAttributedString) {
         self.insertText(response, replacementRange: self.selectedRange())
     }
 }
 
-private extension String {
+private extension [Message] {
     func toAnthropicParameters() -> MessageParameter {
-
         var messages: [MessageParameter.Message] = []
         var systemPrompt: String? = UserDefaults.standard.string(forKey: "systemMessage")
-        let userPrefix = "user: "
-        let systemPrefix = "system: "
 
-        let lines = self.components(separatedBy: .newlines)
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { continue }
-
-            if trimmed.lowercased().hasPrefix(systemPrefix) {
-                // Save/override most recent system message
-                let sysText = trimmed.dropFirst(systemPrefix.count)
-                systemPrompt = String(sysText.trimmingCharacters(in: .whitespaces))
-            } else if trimmed.lowercased().hasPrefix(userPrefix) {
-                let userText = trimmed.dropFirst(userPrefix.count)
-                messages.append(
-                    MessageParameter.Message(
-                        role: .user,
-                        content: .text(String(userText.trimmingCharacters(in: .whitespaces)))
-                    ))
-            } else {
-                // Default to assistant
-                messages.append(
-                    MessageParameter.Message(
-                        role: .assistant,
-                        content: .text(trimmed)
-                    ))
+        for message in self {
+            let content = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch message.kind {
+            case .system:
+                systemPrompt = content
+            case .user:
+                messages.append(MessageParameter.Message(role: .user, content: .text(content)))
+            case .assistant:
+                messages.append(MessageParameter.Message(role: .assistant, content: .text(content)))
             }
         }
 
