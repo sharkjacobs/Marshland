@@ -16,26 +16,29 @@ struct MessageView: View {
     let message: Message
 
     var body: some View {
-        switch message.kind {
-        case .user:
-            Text(message.content)
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.blue, lineWidth: 2)
-                        .background(Color.blue.opacity(0.2))
-                )
-        case .system:
-            Text(message.content)
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.purple, lineWidth: 2)
-                        .background(Color.purple.opacity(0.2))
-                )
-        case .assistant:
-            Text(message.content)
-                .padding(10)
+        let content = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        if content != "" {
+            switch message.kind {
+            case .user:
+                Text(content)
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.blue, lineWidth: 2)
+                            .background(Color.blue.opacity(0.2))
+                    )
+            case .system:
+                Text(content)
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.purple, lineWidth: 2)
+                            .background(Color.purple.opacity(0.2))
+                    )
+            case .assistant:
+                Text(content)
+                    .padding(10)
+            }
         }
     }
 }

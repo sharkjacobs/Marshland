@@ -160,7 +160,7 @@ extension TextStorage {
 // MARK: - Messages
 
 extension TextStorage {
-    func messages() throws -> [Message] {
+    func messages() -> [Message] {
         tendrilTree.messages()
     }
 }
