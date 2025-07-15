@@ -11,6 +11,7 @@ import TendrilTree
 class TextStorage: NSTextStorage, @unchecked Sendable {
     private var backingStorage: NSTextStorage
     private var tendrilTree: TendrilTree
+    private var editedCharactersRange: NSRange?
 
     init(tendrilTree: TendrilTree = TendrilTree()) {
         self.tendrilTree = tendrilTree
@@ -61,9 +62,8 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
             print("Error updating tree: \(error)")
         }
 
-        updateIndentationOfAttribute(for: NSRange(location: range.location, length: insertionLength))
-
         edited([.editedCharacters], range: range, changeInLength: insertionLength - deletionLength)
+        editedCharactersRange = NSRange(location: range.location, length: insertionLength)
         endEditing()
     }
 
@@ -79,7 +79,6 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     override open func setAttributes(_ attrs: [NSAttributedString.Key: Any]?, range: NSRange) {
         let r = NSRange(location: range.location, length: min(range.length, backingStorage.length - range.location))
         backingStorage.setAttributes(attrs, range: r)
-
         edited(.editedAttributes, range: r, changeInLength: 0)
     }
 
@@ -118,6 +117,10 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
 
     override func processEditing() {
         super.processEditing()
+        if editedMask.contains(.editedCharacters), let range = editedCharactersRange {
+            updateIndentationOfAttribute(for: range)
+            editedCharactersRange = nil
+        }
     }
 }
 
@@ -139,13 +142,14 @@ extension TextStorage {
             paragraphStyle.headIndent = indent
             return paragraphStyle
         }
-
+        beginEditing()
         tendrilTree.enumerateLines(in: range) { content, lineRange, indentation in
             backingStorage.addAttribute(
                 .paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange
             )
             edited(.editedAttributes, range: lineRange, changeInLength: 0)
         }
+        endEditing()
     }
 }
 
