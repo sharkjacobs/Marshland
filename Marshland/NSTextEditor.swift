@@ -48,7 +48,7 @@ struct NSTextEditor: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(field: self) }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let scrollView: NSScrollView = NSTextView.scrollableTextView()
+        let scrollView: NSScrollView = CustomCopyTextView.scrollableTextView()
         let textView: NSTextView = scrollView.documentView as! NSTextView
         textView.delegate = context.coordinator
         textView.textContainerInset = .init(width: 0, height: 2)
@@ -137,5 +137,37 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         textView.undoManager?.registerUndo(withTarget: self) { target in
             target.indent(ranges, in: textView)
         }
+    }
+}
+
+class CustomCopyTextView: NSTextView {
+
+    /// Overrides the default copy behavior triggered by ⌘C or the Edit > Copy menu item.
+    /// This method is part of the NSResponder chain.
+    override func copy(_ sender: Any?) {
+        let range = self.selectedRange()
+
+        guard range.length > 0,
+            let textStorage = self.textStorage as? TextStorage,
+            let str = textStorage.copiedText(for: range)
+        else {
+            super.copy(sender)
+            return
+        }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        if !pasteboard.setString(str, forType: .string) {
+            print("Error: Failed to copy text to pasteboard.")
+            super.copy(sender)
+        }
+    }
+
+    // enabling/disabling the "Copy" menu item
+    override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(copy(_:)) {
+            return self.selectedRange().length > 0
+        }
+        return super.validateMenuItem(menuItem)
     }
 }
