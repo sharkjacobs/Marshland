@@ -49,14 +49,14 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
         var insertionLength = 0
         var deletionLength = 0
         do {
-            try tendrilTree.delete(range: range) { _, range in
-                self.backingStorage.replaceCharacters(in: range, with: "")
-                deletionLength += range.length
+            try tendrilTree.delete(range: range) { _, delRange in
+                self.backingStorage.replaceCharacters(in: delRange, with: "")
+                deletionLength += delRange.length
             }
-            try tendrilTree.insert(content: str, at: range.location) { insertion, range in
-                self.backingStorage.replaceCharacters(in: range, with: insertion)
+            try tendrilTree.insert(content: str, at: range.location) { insertion, delRange in
+                self.backingStorage.replaceCharacters(in: delRange, with: insertion)
                 insertionLength += insertion.utf16.count
-                deletionLength += range.length
+                deletionLength += delRange.length
             }
         } catch {
             print("Error updating tree: \(error)")
@@ -87,11 +87,11 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
         edited(.editedAttributes, range: range, changeInLength: 0)
     }
 
-    override open func addAttributes(_ attrs: [NSAttributedString.Key: Any], range: NSRange) {
-        backingStorage.addAttributes(attrs, range: range)
-        edited(.editedAttributes, range: range, changeInLength: 0)
+    override func addAttributes(_ attrs: [NSAttributedString.Key: Any], range: NSRange) {
+        let actualRange = self.editedCharactersRange ?? range
+        backingStorage.addAttributes(attrs, range: actualRange)
+        edited(.editedAttributes, range: actualRange, changeInLength: 0)
     }
-
     override open var fixesAttributesLazily: Bool {
         return backingStorage.fixesAttributesLazily
     }
@@ -150,6 +150,40 @@ extension TextStorage {
             edited(.editedAttributes, range: lineRange, changeInLength: 0)
         }
         endEditing()
+    }
+}
+
+// MARK: - copying
+
+extension TextStorage {
+    func copiedText(for range: NSRange) -> String? {
+        var result: String = ""
+
+        var linesLength: Int = 0
+        var baseIndentation: Int = 0
+        var isFirstLine = true
+        tendrilTree.enumerateLines(in: range) { lineContent, lineRange, lineIndentation in
+            linesLength += lineRange.length
+            if isFirstLine {
+                if lineRange.location < range.location {
+                    let delta = range.location - lineRange.location
+                    result += lineContent.dropFirst(delta)
+                    linesLength -= delta
+                } else {
+                    result += lineContent
+                }
+                baseIndentation = lineIndentation
+                isFirstLine = false
+            } else {
+                result += lineContent.withIndentation(lineIndentation - baseIndentation)
+            }
+        }
+        if linesLength > range.length {
+            let delta = linesLength - range.length
+            result = String(result.dropLast(delta))
+        }
+
+        return result
     }
 }
 
