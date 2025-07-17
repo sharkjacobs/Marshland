@@ -12,6 +12,7 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     private var backingStorage: NSTextStorage
     private var tendrilTree: TendrilTree
     private var editedCharactersRange: NSRange?
+    weak var undoManager: UndoManager?
 
     init(tendrilTree: TendrilTree = TendrilTree()) {
         self.tendrilTree = tendrilTree
@@ -97,14 +98,31 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     }
     // MARK: - TendrilTree Indentation
 
-    func indent(range: NSRange, callback: ([NSRange]) -> Void) throws {
-        try tendrilTree.indent(range: range) { callback($0) }
-        updateIndentationOfAttribute(for: range)
+    func indent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) throws {
+        var undoRanges = [NSRange]()
+        for range in ranges {
+            try tendrilTree.indent(range: range) { undoRanges.append(contentsOf: $0) }
+            updateIndentationOfAttribute(for: range)
+        }
+        updateTextView()
+        //        updateIndentationOfTypingAttributes(in: textView)
+        //        field?.text = textStorage.fileString
+        registerUndoForIndent(undoRanges) { updateTextView() }
     }
 
-    func outdent(range: NSRange, callback: ([NSRange]) -> Void) throws {
-        try tendrilTree.outdent(range: range) { callback($0) }
-        updateIndentationOfAttribute(for: range)
+    func outdent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) throws {
+        var undoRanges = [NSRange]()
+        for range in ranges {
+            try tendrilTree.outdent(range: range) { undoRanges.append(contentsOf: $0) }
+            updateIndentationOfAttribute(for: range)
+        }
+        //        updateIndentationOfTypingAttributes(in: textView)
+
+        // to force change
+        //        field?.text = textStorage.fileString
+        //        edited(.editedCharacters, range: NSRange(location: 0, length: 0), changeInLength: 0)
+        updateTextView()
+        registerUndoForOutdent(undoRanges) { updateTextView() }
     }
 
     func collapse(range: NSRange) throws {
@@ -200,5 +218,23 @@ extension TextStorage {
 extension TextStorage {
     func messages() -> [Message] {
         tendrilTree.messages()
+    }
+}
+
+// MARK: - Undo/Redo
+
+extension TextStorage {
+    func registerUndoForIndent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) {
+        undoManager?.registerUndo(withTarget: self) { target in
+            try? target.outdent(ranges) { updateTextView() }
+        }
+        undoManager?.setActionName("Indent")
+    }
+
+    func registerUndoForOutdent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) {
+        undoManager?.registerUndo(withTarget: self) { target in
+            try? target.indent(ranges) { updateTextView() }
+        }
+        undoManager?.setActionName("Outdent")
     }
 }
