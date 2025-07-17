@@ -48,11 +48,11 @@ struct NSTextEditor: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(field: self) }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let scrollView: NSScrollView = CustomCopyTextView.scrollableTextView()
+        let scrollView: NSScrollView = IndentedTextView.scrollableTextView()
         let textView: NSTextView = scrollView.documentView as! NSTextView
         textView.delegate = context.coordinator
         textView.textContainerInset = .init(width: 0, height: 2)
-        textView.allowsUndo = true
+        textView.allowsUndo = false
         textView.font = NSFont.preferredFont(forTextStyle: .body)
         textView.isContinuousSpellCheckingEnabled = true
         textView.isGrammarCheckingEnabled = true
@@ -93,55 +93,38 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         switch commandSelector {
         case #selector(NSResponder.insertTab(_:)):
-            indent([textView.selectedRange()], in: textView)
+            indent(textView.selectedRange(), in: textView)
             return true
         case #selector(NSResponder.insertBacktab(_:)):
-            outdent([textView.selectedRange()], in: textView)
+            outdent(textView.selectedRange(), in: textView)
             return true
         default:
             return false
         }
     }
 
-    func indent(_ ranges: [NSRange], in textView: NSTextView) {
-        var undoRanges = [NSRange]()
-        for range in ranges {
-            try? textStorage.indent(range: range) {
-                undoRanges.append(contentsOf: $0)
-            }
-        }
-        updateIndentationOfTypingAttributes(in: textView)
-        field?.text = textStorage.fileString
-        registerUndoForIndent(undoRanges, in: textView)
-    }
-
-    func outdent(_ ranges: [NSRange], in textView: NSTextView) {
-        var undoRanges = [NSRange]()
-        for range in ranges {
-            try? textStorage.outdent(range: range) {
-                undoRanges.append(contentsOf: $0)
-            }
-        }
-        updateIndentationOfTypingAttributes(in: textView)
-        field?.text = textStorage.fileString
-        registerUndoForOutdent(undoRanges, in: textView)
-    }
-
-    func registerUndoForIndent(_ ranges: [NSRange], in textView: NSTextView) {
-        textView.undoManager?.registerUndo(withTarget: self) { target in
-            target.outdent(ranges, in: textView)
+    func indent(_ range: NSRange, in textView: NSTextView) {
+        try? textStorage.indent([range]) {
+            self.updateIndentationOfTypingAttributes(in: textView)
         }
     }
 
-    func registerUndoForOutdent(_ ranges: [NSRange], in textView: NSTextView) {
-        textView.undoManager?.registerUndo(withTarget: self) { target in
-            target.indent(ranges, in: textView)
+    func outdent(_ range: NSRange, in textView: NSTextView) {
+        try? textStorage.outdent([range]) {
+            self.updateIndentationOfTypingAttributes(in: textView)
         }
     }
 }
 
-class CustomCopyTextView: NSTextView {
+// MARK: - IndentedTextview
 
+class IndentedTextView: NSTextView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let undoManager = window?.undoManager {
+            (self.textStorage as? TextStorage)?.undoManager = undoManager
+        }
+    }
     /// Overrides the default copy behavior triggered by ⌘C or the Edit > Copy menu item.
     /// This method is part of the NSResponder chain.
     override func copy(_ sender: Any?) {
