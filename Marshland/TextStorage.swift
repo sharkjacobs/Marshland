@@ -11,14 +11,13 @@ import TendrilTree
 class TextStorage: NSTextStorage, @unchecked Sendable {
     private var backingStorage: NSTextStorage
     private var tendrilTree: TendrilTree
-    private var editedCharactersRange: NSRange?
     weak var undoManager: UndoManager?
 
     // MARK: - Initializers
 
     init(tendrilTree: TendrilTree = TendrilTree()) {
         self.tendrilTree = tendrilTree
-        self.backingStorage = NSTextStorage()
+        self.backingStorage = NSTextStorage(string: tendrilTree.string)
         super.init()
     }
 
@@ -40,128 +39,58 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
         return backingStorage.length
     }
 
-    override func attributes(at location: Int, effectiveRange range: NSRangePointer?)
-        -> [NSAttributedString.Key: Any]
-    {
+    override func attributes(
+        at location: Int,
+        effectiveRange range: NSRangePointer?
+    ) -> [NSAttributedString.Key: Any] {
         return backingStorage.attributes(at: location, effectiveRange: range)
     }
 
     // MARK: - Insertion/Deletion
 
     override func replaceCharacters(in range: NSRange, with str: String) {
-        var lines = [IndentedLine]()
-        do {
-            let baseIndentation = try tendrilTree.indentation(at: range.location)
-            let wholeString = str.startIndex..<str.endIndex
-            str.enumerateSubstrings(in: wholeString, options: .byLines) { _, _, enclosingRange, _ in
-                let line = str[enclosingRange]
-                let tabCount = line.prefix(while: { $0 == "\t" }).count
-                let indentedLine = IndentedLine(
-                    content: String(line.dropFirst(tabCount)), indentation: tabCount + baseIndentation)
-                lines.append(indentedLine)
-            }
-        } catch {
-            fatalError("replaceCharacters on invalid range: \(error)")
-        }
+        backingStorage.replaceCharacters(in: range, with: str)
 
-        replaceCharacters(in: range, with: lines)
-    }
-
-    func replaceCharacters(in range: NSRange, with lines: [IndentedLine]) {
         beginEditing()
-
         do {
-            let insertionLength = lines.reduce(0) { $0 + $1.content.utf16.count }
-            var deletionLength = 0
-
-            let deletedContent = try delete(range: range)
-            deletionLength = deletedContent.reduce(0) { $0 + $1.content.utf16.count }
-
-            insertLines(lines, to: range.location)
-
-            //            try tendrilTree.insert(content: str, at: range.location) { insertion, delRange in
-            //                insertionLength += insertion.utf16.count
-            //                deletionLength += delRange.length
-            //            }
-
-            edited([.editedCharacters], range: range, changeInLength: insertionLength - deletionLength)
-            editedCharactersRange = NSRange(location: range.location, length: insertionLength)
-            registerUndoForReplaceCharacters(in: editedCharactersRange!, with: deletedContent)
+            try tendrilTree.delete(range: range)
+            try tendrilTree.insert(content: str, at: range.location)
         } catch {
-            print("Error updating tree: \(error)")
+            print("Error replacing characters: \(error)")
+            return
         }
+        edited([.editedCharacters], range: range, changeInLength: str.utf16.count - range.length)
 
         endEditing()
-
     }
 
-    private func offsetIsAtNewlineBoundary(_ offset: Int) -> Bool {
-        guard offset > 0 else { return true }
+    override func deleteCharacters(in range: NSRange) {
+        backingStorage.deleteCharacters(in: range)
+
+        beginEditing()
         do {
-            try _ = tendrilTree.rangeOfLine(at: offset)
-            return true
+            try tendrilTree.delete(range: range)
+            // TODO: restore the indentation of deleted lines upon undo
         } catch {
-            return false
+            print("Error deleting characters: \(error)")
+            return
         }
+        edited([.editedCharacters], range: range, changeInLength: -range.length)
+
+        endEditing()
     }
 
-    private func insertLines(_ lines: [IndentedLine], to offset: Int) {
+    // Returns any extra tab characters which might be converted into indentation and deleted from backinStore
+    private func insertLines(_ lines: [IndentedLine], to offset: Int) throws {
         guard lines.count > 0 else { return }
 
         var insertionPoint = offset
         for line in lines {
-            try? tendrilTree.insert(content: line.content, at: insertionPoint) { insertionContent, deletionRange in
-                if deletionRange.length > 0 {
-                    let deletedContent = self.backingStorage.attributedSubstring(from: deletionRange)
-                    print("What do I do with this: \(deletedContent)?")
-                    fatalError("huh?")
-                }
-
-                self.backingStorage.replaceCharacters(in: NSRange(location: insertionPoint, length: 0), with: insertionContent)
-                try? self.tendrilTree.setIndentation(to: line.indentation, at: insertionPoint)
-                insertionPoint += insertionContent.utf16.count
-            }
+            let range = NSRange(location: insertionPoint, length: 0)
+            replaceCharacters(in: range, with: line.content)
+            insertionPoint += line.content.utf16.count
+            try setIndentation(at: insertionPoint, to: line.indentation)
         }
-
-        //        registerUndoForInsertion(range: NSRange(location: offset, length: insertionPoint))
-    }
-
-    // returns the deleted lines, for undo
-    private func delete(range: NSRange) throws -> [IndentedLine] {
-        guard range.length > 0 else { return [] }
-
-        var lines = [IndentedLine]()
-        tendrilTree.enumerateLines(in: range) { lineContent, lineRange, lineIndentation in
-            var content: any StringProtocol = lineContent
-            if range.location > lineRange.location {
-                content = content.dropFirst(range.location - lineRange.location)
-            }
-            if lineRange.upperBound > range.upperBound {
-                content = content.dropLast(lineRange.upperBound - range.upperBound)
-            }
-            if !content.isEmpty {
-                lines.append(IndentedLine(content: String(content), indentation: lineIndentation))
-            }
-        }
-
-        try tendrilTree.delete(range: range) { _, realRange in
-            self.backingStorage.replaceCharacters(in: realRange, with: "")
-
-            if realRange.length > range.length {
-                // We shouldn't have to know this about the internals of TendrilTree,
-                // but if realRange.length > range.length, it's because we deleted chars before \t,
-                // and they became the line prefix and were deleted
-                // so to undo we should reinsert those tabs (we're already setting indentation back)
-                let lastLine = IndentedLine(
-                    content: lines.last!.content + String(repeating: "\t", count: realRange.length - range.length),
-                    indentation: lines.last!.indentation
-                )
-                lines = lines.dropLast()
-                lines.append(lastLine)
-            }
-        }
-        //        registerUndoForDeletion(lines: lines, offset: range.location)
-        return lines
     }
 
     // MARK: - Attributes
@@ -187,15 +116,18 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     }
 
     override func addAttributes(_ attrs: [NSAttributedString.Key: Any], range: NSRange) {
-        let actualRange = self.editedCharactersRange ?? range
-        backingStorage.addAttributes(attrs, range: actualRange)
-        edited(.editedAttributes, range: actualRange, changeInLength: 0)
+        backingStorage.addAttributes(attrs, range: range)
+        edited(.editedAttributes, range: range, changeInLength: 0)
     }
     override open var fixesAttributesLazily: Bool {
         return backingStorage.fixesAttributesLazily
     }
 
     // MARK: - Indentation
+
+    func setIndentation(at offset: Int, to indentation: Int) throws {
+        try tendrilTree.setIndentation(at: offset, to: indentation)
+    }
 
     func indent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) throws {
         var undoRanges = [NSRange]()
@@ -225,13 +157,13 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
         try tendrilTree.expand(range: range)
     }
 
-    override func processEditing() {
-        super.processEditing()
-        if editedMask.contains(.editedCharacters), let range = editedCharactersRange {
-            updateIndentationOfAttribute(for: range)
-            editedCharactersRange = nil
-        }
-    }
+    //    override func processEditing() {
+    //        super.processEditing()
+    //        if editedMask.contains(.editedCharacters), let range = editedCharactersRange {
+    //            updateIndentationOfAttribute(for: range)
+    //            editedCharactersRange = nil
+    //        }
+    //    }
 }
 
 extension TextStorage {
@@ -269,11 +201,11 @@ struct IndentedLine: Codable {
     let content: String
     let indentation: Int
 
-    init(content: String, indentation: Int) {
-        self.content = content
-        assert(!content.hasPrefix("\t"))
-        self.indentation = indentation
-    }
+    //    init(content: String, indentation: Int) {
+    //        self.content = content
+    //        assert(!content.hasPrefix("\t"))
+    //        self.indentation = indentation
+    //    }
 }
 
 extension TextStorage {
@@ -318,7 +250,7 @@ extension TextStorage {
     }
 
     func pasteLines(lines: [IndentedLine], at range: NSRange) {
-        replaceCharacters(in: range, with: lines)
+        //        replaceCharacters(in: range, with: lines)
     }
 }
 
@@ -357,7 +289,7 @@ extension TextStorage {
 
     func registerUndoForReplaceCharacters(in range: NSRange, with lines: [IndentedLine]) {
         undoManager?.registerUndo(withTarget: self) { target in
-            target.replaceCharacters(in: range, with: lines)
+            //            target.replaceCharacters(in: range, with: lines)
         }
     }
 }
