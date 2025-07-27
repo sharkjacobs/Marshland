@@ -131,13 +131,11 @@ import Testing
         let content = "<user>\n\thello\n<system>\n"
         let tree = TendrilTree(content: content)
         let messages = tree.messages()
-        try #require(messages.count == 3)
+        try #require(messages.count == 2)
         #expect(messages[0].kind == .user)
         #expect(messages[0].content == "hello\n")
         #expect(messages[1].kind == .system)
         #expect(messages[1].content == "")
-        #expect(messages[2].kind == .assistant)
-        #expect(messages[2].content == "")
     }
 
     @Test func testParse_unclosedStructuralTagAtEOF() throws {
