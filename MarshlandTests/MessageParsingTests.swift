@@ -6,6 +6,7 @@
 //
 
 import Testing
+import Foundation
 @testable import TendrilTree
 
 @Suite final actor ParserTests {
