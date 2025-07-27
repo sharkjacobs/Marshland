@@ -7,17 +7,21 @@
 
 import AppKit
 import SwiftUI
+import TendrilTree
 
 struct NSTextEditor: NSViewRepresentable {
     @Binding var text: String
     var customize: (NSTextView) -> Void = { _ in }
 
     class Coordinator: NSObject {
-        let textStorage = TextStorage()
+        let tendrilTree: TendrilTree
+        let textStorage: TextStorage
         var field: NSTextEditor?
         private var indentationDepth: Int?
         private var typingAttributesParagraphStyle: NSParagraphStyle?
-        private func updateIndentationOfTypingAttributes(in textView: NSTextView) {
+        private var isHandlingInsert = false
+
+        func updateIndentationOfTypingAttributes(in textView: NSTextView) {
             func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
                 let baseIndentation = 15
                 let indentSize = 20
@@ -42,7 +46,11 @@ struct NSTextEditor: NSViewRepresentable {
             field?.text = textStorage.fileString
         }
 
-        init(field: NSTextEditor) { self.field = field }
+        init(field: NSTextEditor?) {
+            self.field = field
+            self.tendrilTree = TendrilTree(content: field?.text ?? "")
+            self.textStorage = TextStorage(tendrilTree: tendrilTree)
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(field: self) }
@@ -63,7 +71,8 @@ struct NSTextEditor: NSViewRepresentable {
 
         customize(textView)
 
-        textView.string = text
+        //        textView.string = text
+
         context.coordinator.textStorage.updateIndentationOfAttribute(
             for: NSRange(location: 0, length: textView.string.utf16.count))
 
@@ -81,41 +90,6 @@ struct NSTextEditor: NSViewRepresentable {
     }
 }
 
-// MARK: - NSTextViewDelegate
-
-extension NSTextEditor.Coordinator: NSTextViewDelegate {
-    func textViewDidChangeSelection(_ notification: Notification) {
-        guard let textView = notification.object as? NSTextView else { return }
-
-        updateIndentationOfTypingAttributes(in: textView)
-    }
-
-    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        switch commandSelector {
-        case #selector(NSResponder.insertTab(_:)):
-            indent(textView.selectedRange(), in: textView)
-            return true
-        case #selector(NSResponder.insertBacktab(_:)):
-            outdent(textView.selectedRange(), in: textView)
-            return true
-        default:
-            return false
-        }
-    }
-
-    func indent(_ range: NSRange, in textView: NSTextView) {
-        try? textStorage.indent([range]) {
-            self.updateIndentationOfTypingAttributes(in: textView)
-        }
-    }
-
-    func outdent(_ range: NSRange, in textView: NSTextView) {
-        try? textStorage.outdent([range]) {
-            self.updateIndentationOfTypingAttributes(in: textView)
-        }
-    }
-}
-
 // MARK: - IndentedTextview
 
 class IndentedTextView: NSTextView {
@@ -125,6 +99,7 @@ class IndentedTextView: NSTextView {
             (self.textStorage as? TextStorage)?.undoManager = undoManager
         }
     }
+
     /// Overrides the default copy behavior triggered by ⌘C or the Edit > Copy menu item.
     /// This method is part of the NSResponder chain.
     override func copy(_ sender: Any?) {
@@ -132,7 +107,7 @@ class IndentedTextView: NSTextView {
 
         guard range.length > 0,
             let textStorage = self.textStorage as? TextStorage,
-            let str = textStorage.copiedText(for: range)
+            let (str, lines) = textStorage.copiedData(for: range)
         else {
             super.copy(sender)
             return
@@ -140,16 +115,35 @@ class IndentedTextView: NSTextView {
 
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        if !pasteboard.setString(str, forType: .string) {
-            print("Error: Failed to copy text to pasteboard.")
-            super.copy(sender)
+        pasteboard.setString(str, forType: .string)
+        if let data = try? JSONEncoder().encode(lines) {
+            pasteboard.setData(data, forType: NSPasteboard.PasteboardType("com.yourdomain.marshland.richtext"))
         }
+    }
+
+    override func paste(_ sender: Any?) {
+        let pb = NSPasteboard.general
+        if let data = pb.data(forType: NSPasteboard.PasteboardType("com.yourdomain.marshland.richtext")),
+            let lines = try? JSONDecoder().decode([IndentedLine].self, from: data),
+            let tendrilStorage = textStorage as? TextStorage
+        {
+            tendrilStorage.pasteLines(lines: lines, at: selectedRange())
+        } else {
+            super.paste(sender)
+        }
+
+        // TODO: handle undo
     }
 
     // enabling/disabling the "Copy" menu item
     override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(copy(_:)) {
             return self.selectedRange().length > 0
+        }
+        if menuItem.action == #selector(paste(_:)) {
+            let pb = NSPasteboard.general
+            return pb.canReadItem(withDataConformingToTypes: ["com.yourdomain.marshland.richtext"])
+                || pb.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.string.rawValue])
         }
         return super.validateMenuItem(menuItem)
     }

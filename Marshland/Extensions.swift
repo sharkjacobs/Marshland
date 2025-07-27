@@ -8,6 +8,11 @@
 import Foundation
 
 extension String {
+    @inline(__always)
+    var utf16Length: Int {
+        self.utf16.count
+    }
+
     public func withIndentation(_ indentation: Int) -> String {
         guard indentation != 0 else {
             return self

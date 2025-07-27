@@ -19,22 +19,24 @@
 			remoteGlobalIDString = BFD824F92DE63C4A00914255;
 			remoteInfo = Marshland;
 		};
-		BFD825162DE63C4B00914255 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BFD824F22DE63C4A00914255 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = BFD824F92DE63C4A00914255;
-			remoteInfo = Marshland;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		BFD824FA2DE63C4A00914255 /* Marshland.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Marshland.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFD8250B2DE63C4B00914255 /* MarshlandTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MarshlandTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		BFD825152DE63C4B00914255 /* MarshlandUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MarshlandUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BF73B3252E2CC5FD00B68C8D /* Exceptions for "Marshland" folder in "MarshlandTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				NSTextEditor.swift,
+				"NSTextEditor+Delegate.swift",
+				Parser.swift,
+				TextStorage.swift,
+			);
+			target = BFD8250A2DE63C4B00914255 /* MarshlandTests */;
+		};
 		BFD8251D2DE63C4B00914255 /* Exceptions for "Marshland" folder in "Marshland" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -49,6 +51,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				BFD8251D2DE63C4B00914255 /* Exceptions for "Marshland" folder in "Marshland" target */,
+				BF73B3252E2CC5FD00B68C8D /* Exceptions for "Marshland" folder in "MarshlandTests" target */,
 			);
 			path = Marshland;
 			sourceTree = "<group>";
@@ -56,11 +59,6 @@
 		BFD8250E2DE63C4B00914255 /* MarshlandTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MarshlandTests;
-			sourceTree = "<group>";
-		};
-		BFD825182DE63C4B00914255 /* MarshlandUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MarshlandUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,13 +80,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BFD825122DE63C4B00914255 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -97,7 +88,6 @@
 			children = (
 				BFD824FC2DE63C4A00914255 /* Marshland */,
 				BFD8250E2DE63C4B00914255 /* MarshlandTests */,
-				BFD825182DE63C4B00914255 /* MarshlandUITests */,
 				BFD824FB2DE63C4A00914255 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -107,7 +97,6 @@
 			children = (
 				BFD824FA2DE63C4A00914255 /* Marshland.app */,
 				BFD8250B2DE63C4B00914255 /* MarshlandTests.xctest */,
-				BFD825152DE63C4B00914255 /* MarshlandUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -162,29 +151,6 @@
 			productReference = BFD8250B2DE63C4B00914255 /* MarshlandTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		BFD825142DE63C4B00914255 /* MarshlandUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = BFD825262DE63C4B00914255 /* Build configuration list for PBXNativeTarget "MarshlandUITests" */;
-			buildPhases = (
-				BFD825112DE63C4B00914255 /* Sources */,
-				BFD825122DE63C4B00914255 /* Frameworks */,
-				BFD825132DE63C4B00914255 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				BFD825172DE63C4B00914255 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				BFD825182DE63C4B00914255 /* MarshlandUITests */,
-			);
-			name = MarshlandUITests;
-			packageProductDependencies = (
-			);
-			productName = MarshlandUITests;
-			productReference = BFD825152DE63C4B00914255 /* MarshlandUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -199,10 +165,6 @@
 						CreatedOnToolsVersion = 16.3;
 					};
 					BFD8250A2DE63C4B00914255 = {
-						CreatedOnToolsVersion = 16.3;
-						TestTargetID = BFD824F92DE63C4A00914255;
-					};
-					BFD825142DE63C4B00914255 = {
 						CreatedOnToolsVersion = 16.3;
 						TestTargetID = BFD824F92DE63C4A00914255;
 					};
@@ -228,7 +190,6 @@
 			targets = (
 				BFD824F92DE63C4A00914255 /* Marshland */,
 				BFD8250A2DE63C4B00914255 /* MarshlandTests */,
-				BFD825142DE63C4B00914255 /* MarshlandUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -242,13 +203,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		BFD825092DE63C4B00914255 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		BFD825132DE63C4B00914255 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -272,13 +226,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BFD825112DE63C4B00914255 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -286,11 +233,6 @@
 			isa = PBXTargetDependency;
 			target = BFD824F92DE63C4A00914255 /* Marshland */;
 			targetProxy = BFD8250C2DE63C4B00914255 /* PBXContainerItemProxy */;
-		};
-		BFD825172DE63C4B00914255 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = BFD824F92DE63C4A00914255 /* Marshland */;
-			targetProxy = BFD825162DE63C4B00914255 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -533,40 +475,6 @@
 			};
 			name = Release;
 		};
-		BFD825272DE63C4B00914255 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9VV558X8J3;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.gdb.MarshlandUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = Marshland;
-			};
-			name = Debug;
-		};
-		BFD825282DE63C4B00914255 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 9VV558X8J3;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.gdb.MarshlandUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = Marshland;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -593,15 +501,6 @@
 			buildConfigurations = (
 				BFD825242DE63C4B00914255 /* Debug */,
 				BFD825252DE63C4B00914255 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		BFD825262DE63C4B00914255 /* Build configuration list for PBXNativeTarget "MarshlandUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				BFD825272DE63C4B00914255 /* Debug */,
-				BFD825282DE63C4B00914255 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
