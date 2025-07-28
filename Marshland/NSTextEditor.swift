@@ -44,12 +44,27 @@ struct NSTextEditor: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             field?.text = textStorage.fileString
+            normalizeAttributes()
+        }
+
+        func normalizeAttributes() {
+            // This could be done at the layout stage instead, might be more efficient
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 14),
+                .foregroundColor: NSColor.labelColor,
+            ]
+            let range = NSRange(location: 0, length: textStorage.length)
+            textStorage.addAttributes(attributes, range: range)
         }
 
         init(field: NSTextEditor?) {
             self.field = field
             self.tendrilTree = TendrilTree(content: field?.text ?? "")
             self.textStorage = TextStorage(tendrilTree: tendrilTree)
+
+            super.init()
+
+            self.normalizeAttributes()
         }
     }
 
@@ -61,7 +76,10 @@ struct NSTextEditor: NSViewRepresentable {
         textView.delegate = context.coordinator
         textView.textContainerInset = .init(width: 0, height: 2)
         textView.allowsUndo = false
-        textView.font = NSFont.preferredFont(forTextStyle: .body)
+        textView.typingAttributes = [
+            .font: NSFont.preferredFont(forTextStyle: .body),
+            .foregroundColor: NSColor.labelColor,
+        ]
         textView.isContinuousSpellCheckingEnabled = true
         textView.isGrammarCheckingEnabled = true
         textView.enclosingScrollView?.focusRingType = .exterior
