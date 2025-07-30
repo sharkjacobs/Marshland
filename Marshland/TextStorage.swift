@@ -80,19 +80,6 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
         endEditing()
     }
 
-    // Returns any extra tab characters which might be converted into indentation and deleted from backinStore
-    private func insertLines(_ lines: [IndentedLine], to offset: Int) throws {
-        guard lines.count > 0 else { return }
-
-        var insertionPoint = offset
-        for line in lines {
-            let range = NSRange(location: insertionPoint, length: 0)
-            replaceCharacters(in: range, with: line.content)
-            insertionPoint += line.content.utf16.count
-            try setIndentation(at: insertionPoint, to: line.indentation)
-        }
-    }
-
     // MARK: - Attributes
 
     override open func invalidateAttributes(in range: NSRange) {
@@ -125,28 +112,13 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
 
     // MARK: - Indentation
 
-    func setIndentation(at offset: Int, to indentation: Int) throws {
-        try tendrilTree.setIndentation(at: offset, to: indentation)
-    }
-
-    func indent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) throws {
-        var undoRanges = [NSRange]()
-        for range in ranges {
-            try tendrilTree.indent(range: range) { undoRanges.append(contentsOf: $0) }
-            updateIndentationOfAttribute(for: range)
+    func indent(depth: Int, at location: Int) throws {
+        if depth > 0 {
+            try tendrilTree.indent(depth: depth, range: NSRange(location: location, length: 0))
+        } else {
+            try tendrilTree.outdent(depth: depth, range: NSRange(location: location, length: 0))
         }
-        updateTextView()
-        registerUndoForIndent(undoRanges) { updateTextView() }
-    }
-
-    func outdent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) throws {
-        var undoRanges = [NSRange]()
-        for range in ranges {
-            try tendrilTree.outdent(range: range) { undoRanges.append(contentsOf: $0) }
-            updateIndentationOfAttribute(for: range)
-        }
-        updateTextView()
-        registerUndoForOutdent(undoRanges) { updateTextView() }
+        updateIndentationOfAttribute(for: NSRange(location: location, length: 0))
     }
 
     func collapse(range: NSRange) throws {
@@ -156,14 +128,6 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     func expand(range: NSRange) throws {
         try tendrilTree.expand(range: range)
     }
-
-    //    override func processEditing() {
-    //        super.processEditing()
-    //        if editedMask.contains(.editedCharacters), let range = editedCharactersRange {
-    //            updateIndentationOfAttribute(for: range)
-    //            editedCharactersRange = nil
-    //        }
-    //    }
 }
 
 extension TextStorage {
@@ -267,29 +231,5 @@ extension TextStorage {
 extension TextStorage {
     func messages() -> [Message] {
         tendrilTree.messages()
-    }
-}
-
-// MARK: - Undo/Redo
-
-extension TextStorage {
-    func registerUndoForIndent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) {
-        undoManager?.registerUndo(withTarget: self) { target in
-            try? target.outdent(ranges) { updateTextView() }
-        }
-        undoManager?.setActionName("Indent")
-    }
-
-    func registerUndoForOutdent(_ ranges: [NSRange], updateTextView: @escaping () -> Void) {
-        undoManager?.registerUndo(withTarget: self) { target in
-            try? target.indent(ranges) { updateTextView() }
-        }
-        undoManager?.setActionName("Outdent")
-    }
-
-    func registerUndoForReplaceCharacters(in range: NSRange, with lines: [IndentedLine]) {
-        undoManager?.registerUndo(withTarget: self) { target in
-            //            target.replaceCharacters(in: range, with: lines)
-        }
     }
 }

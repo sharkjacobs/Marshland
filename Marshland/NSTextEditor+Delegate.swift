@@ -17,10 +17,10 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         switch commandSelector {
         case #selector(NSResponder.insertTab(_:)):
-            indent(textView.selectedRange(), in: textView)
+            indent(textView.selectedRange(), depth: 1, in: textView)
             return true
         case #selector(NSResponder.insertBacktab(_:)):
-            outdent(textView.selectedRange(), in: textView)
+            indent(textView.selectedRange(), depth: -1, in: textView)
             return true
         default:
             return false
@@ -47,13 +47,13 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     ///   A tuple containing:
     ///   - `newRange`: The range in the base string to be replaced.
     ///   - `newString`: The string to insert at `newRange`, or `nil`.
-    ///   - `indents`: An array of (level, location) pairs where indentation should be changed.
+    ///   - `indents`: An array of (location, depth) pairs where indentation should be changed.
     ///   Returns `nil` if the operation does not involve any indentation.
     func derivedTextEdits(
         to base: NSString,
         in range: NSRange,
         inserting str: String?
-    ) -> (newRange: NSRange, newString: String?, indents: [(level: Int, location: Int)])? {
+    ) -> (newRange: NSRange, newString: String?, indents: [(location: Int, depth: Int)])? {
         let tabUTF16 = "\t".utf16.first!
         let newLineUTF16 = "\n".utf16.first!
         let isRangeAtBeginningOfLine = range.location == 0 || (base.character(at: range.location - 1) == newLineUTF16)
@@ -76,7 +76,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
             if isRangeAtBeginningOfLine, tabsAfterRange > 0 {
                 // Deletion moves a tab to the beginning of the line, so convert it to an indent.
                 let newRange = NSRange(location: range.location, length: range.length + tabsAfterRange)
-                return (newRange, str, [(level: tabsAfterRange, location: range.location)])
+                return (newRange, str, [(location: range.location, depth: tabsAfterRange)])
             } else {
                 // Standard deletion, no indentation change.
                 return nil
@@ -88,7 +88,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         guard let str else { fatalError() }
 
         var newString = ""
-        var indentations: [(level: Int, location: Int)] = []
+        var indentations = [(location: Int, depth: Int)]()
 
         var insertionPoint = range.location
         var isFirstLineOfInsert = true
@@ -102,7 +102,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
                 let restOfLine = line[tabs.endIndex...]
 
                 newString.append(contentsOf: restOfLine)
-                indentations.append((level: tabs.count, location: insertionPoint))
+                indentations.append((location: insertionPoint, depth: tabs.count))
                 insertionPoint += restOfLine.utf16.count
             } else {
                 newString.append(contentsOf: line)
@@ -114,7 +114,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         var deletionLength = range.length
         if newString.hasSuffix("\n"), tabsAfterRange > 0 {
             deletionLength += tabsAfterRange
-            indentations.append((level: tabsAfterRange, location: range.location + newString.utf16.count))
+            indentations.append((location: range.location + newString.utf16.count, depth: tabsAfterRange))
         }
 
         if indentations.isEmpty {
@@ -134,26 +134,14 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         if let (newRange, newString, indents) = self.derivedTextEdits(
             to: textViewString, in: affectedCharRange, inserting: replacementString)
         {
+            textView.undoManager?.beginUndoGrouping()
             textView.insertText(newString as Any, replacementRange: newRange)
-            for indent in indents {
-                // TODO: handle indent.level
-                self.indent(NSRange(location: indent.location, length: 0), in: textView)
-            }
+            self.indent(indents, in: textView)
+            textView.undoManager?.endUndoGrouping()
             return false
         } else {
             return true
         }
     }
 
-    func indent(_ range: NSRange, in textView: NSTextView) {
-        try? textStorage.indent([range]) {
-            self.updateIndentationOfTypingAttributes(in: textView)
-        }
-    }
-
-    func outdent(_ range: NSRange, in textView: NSTextView) {
-        try? textStorage.outdent([range]) {
-            self.updateIndentationOfTypingAttributes(in: textView)
-        }
-    }
 }
