@@ -66,6 +66,47 @@ struct NSTextEditor: NSViewRepresentable {
 
             self.normalizeAttributes()
         }
+
+        func indent(_ range: NSRange, depth: Int, in textView: NSTextView) {
+            if range.length == 0 {
+                self.indent([(range.location, depth)], in: textView)
+            } else {
+                var indentations = [(Int, Int)]()
+                (textView.string as NSString).enumerateSubstrings(in: range, options: .byLines) {
+                    (_, range, enclosingRange, _) in
+                    indentations.append((range.location, depth))
+                }
+                self.indent(indentations, in: textView)
+            }
+        }
+
+        func indent(
+            _ indents: [(location: Int, depth: Int)],
+            in textView: NSTextView
+        ) {
+            guard !indents.isEmpty else { return }
+
+            var undoIndents = [(location: Int, depth: Int)]()
+            for (location, depth) in indents {
+                do {
+                    let currentDepth = try textStorage.indentation(at: location)
+                    if currentDepth + depth < 0 {
+                        try textStorage.indent(depth: -currentDepth, at: location)
+                        undoIndents.append((location: location, depth: currentDepth))
+                    } else {
+                        try textStorage.indent(depth: depth, at: location)
+                        undoIndents.append((location: location, depth: -depth))
+                    }
+                } catch {
+                    fatalError()
+                }
+            }
+            self.updateIndentationOfTypingAttributes(in: textView)
+
+            textView.undoManager?.registerUndo(withTarget: self) { target in
+                target.indent(undoIndents, in: textView)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(field: self) }
@@ -75,7 +116,7 @@ struct NSTextEditor: NSViewRepresentable {
         let textView: NSTextView = scrollView.documentView as! NSTextView
         textView.delegate = context.coordinator
         textView.textContainerInset = .init(width: 0, height: 2)
-        textView.allowsUndo = false
+        textView.allowsUndo = true
         textView.typingAttributes = [
             .font: NSFont.preferredFont(forTextStyle: .body),
             .foregroundColor: NSColor.labelColor,
