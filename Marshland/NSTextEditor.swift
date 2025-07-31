@@ -69,7 +69,19 @@ struct NSTextEditor: NSViewRepresentable {
 
         func indent(_ range: NSRange, depth: Int, in textView: NSTextView) {
             if range.length == 0 {
-                self.indent([(range.location, depth)], in: textView)
+                let loc = range.location
+                self.indent([(loc, depth)], in: textView)
+                let str = (textView.string as NSString)
+                if (loc == 0 || str.character(at: loc - 1) == "\n".utf16.first!)
+                    && (loc == str.length || str.character(at: loc) == "\n".utf16.first!)
+                {
+                    // if current line is empty
+                    // use invisible char to force layout to adopt new typing attribute indentation
+                    textView.undoManager?.disableUndoRegistration()
+                    textView.insertText("\u{200B}", replacementRange: NSRange(location: loc, length: 0))
+                    textView.insertText("", replacementRange: NSRange(location: loc, length: 1))
+                    textView.undoManager?.enableUndoRegistration()
+                }
             } else {
                 var indentations = [(Int, Int)]()
                 (textView.string as NSString).enumerateSubstrings(in: range, options: .byLines) {
@@ -88,6 +100,8 @@ struct NSTextEditor: NSViewRepresentable {
 
             var undoIndents = [(location: Int, depth: Int)]()
             for (location, depth) in indents {
+                if depth == 0 { continue }
+
                 do {
                     let currentDepth = try textStorage.indentation(at: location)
                     if currentDepth + depth < 0 {
@@ -124,6 +138,7 @@ struct NSTextEditor: NSViewRepresentable {
         textView.isContinuousSpellCheckingEnabled = true
         textView.isGrammarCheckingEnabled = true
         textView.enclosingScrollView?.focusRingType = .exterior
+        textView.isAutomaticTextCompletionEnabled = false
         scrollView.borderType = .bezelBorder
 
         context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
@@ -166,7 +181,7 @@ class IndentedTextView: NSTextView {
 
         guard range.length > 0,
             let textStorage = self.textStorage as? TextStorage,
-            let (str, lines) = textStorage.copiedData(for: range)
+            let chunk: PasteboardChunk = textStorage.copiedData(for: range)
         else {
             super.copy(sender)
             return
@@ -174,24 +189,28 @@ class IndentedTextView: NSTextView {
 
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(str, forType: .string)
-        if let data = try? JSONEncoder().encode(lines) {
-            pasteboard.setData(data, forType: NSPasteboard.PasteboardType("com.yourdomain.marshland.richtext"))
+        pasteboard.setString(chunk.content, forType: .string)
+        if let data = try? JSONEncoder().encode(chunk) {
+            pasteboard.setData(data, forType: NSPasteboard.PasteboardType("com.gdb.marshlandchunk"))
         }
     }
 
     override func paste(_ sender: Any?) {
         let pb = NSPasteboard.general
-        if let data = pb.data(forType: NSPasteboard.PasteboardType("com.yourdomain.marshland.richtext")),
-            let lines = try? JSONDecoder().decode([IndentedLine].self, from: data),
-            let tendrilStorage = textStorage as? TextStorage
+        if let data = pb.data(forType: NSPasteboard.PasteboardType("com.gdb.marshlandchunk")),
+            let chunk = try? JSONDecoder().decode(PasteboardChunk.self, from: data)
         {
-            tendrilStorage.pasteLines(lines: lines, at: selectedRange())
+            let insertRange = selectedRange()
+            self.undoManager?.beginUndoGrouping()
+            self.insertText(chunk.content as Any, replacementRange: insertRange)
+            let tempIs = chunk.indents.map { (location: $0.location + insertRange.location, depth: $0.depth) }
+            (self.delegate as? NSTextEditor.Coordinator)?.indent(tempIs, in: self)
+            self.undoManager?.endUndoGrouping()
+
         } else {
             super.paste(sender)
         }
 
-        // TODO: handle undo
     }
 
     // enabling/disabling the "Copy" menu item
@@ -201,7 +220,7 @@ class IndentedTextView: NSTextView {
         }
         if menuItem.action == #selector(paste(_:)) {
             let pb = NSPasteboard.general
-            return pb.canReadItem(withDataConformingToTypes: ["com.yourdomain.marshland.richtext"])
+            return pb.canReadItem(withDataConformingToTypes: ["com.gdb.marshlandchunk"])
                 || pb.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.string.rawValue])
         }
         return super.validateMenuItem(menuItem)

@@ -161,60 +161,30 @@ extension TextStorage {
 
 // MARK: - Copy/Paste
 
-struct IndentedLine: Codable {
-    let content: String
-    let indentation: Int
+struct Indent: Codable {
+    let location: Int
+    let depth: Int
+}
 
-    //    init(content: String, indentation: Int) {
-    //        self.content = content
-    //        assert(!content.hasPrefix("\t"))
-    //        self.indentation = indentation
-    //    }
+struct PasteboardChunk: Codable {
+    let content: String
+    let indents: [Indent]
 }
 
 extension TextStorage {
-    func copiedData(for range: NSRange) -> (String, [IndentedLine])? {
+    func copiedData(for range: NSRange) -> PasteboardChunk? {
         guard range.upperBound <= length else { return nil }
 
-        var str: String = ""
-        var lines: [IndentedLine] = []
+        let content: String = (backingStorage.string as NSString).substring(with: range)
+        var indentations = [Indent]()
 
-        var linesLength: Int = 0
-        var baseIndentation: Int = 0
-        var isFirstLine = true
-        tendrilTree.enumerateLines(in: range) { lineContent, lineRange, lineIndentation in
-            linesLength += lineRange.length
-            if isFirstLine {
-                if lineRange.location < range.location {
-                    let delta = range.location - lineRange.location
-                    str += lineContent.dropFirst(delta)
-                    lines.append(IndentedLine(content: str, indentation: lineIndentation))
-                    linesLength -= delta
-                } else {
-                    str += lineContent
-                    lines.append(IndentedLine(content: lineContent, indentation: lineIndentation))
-                }
-                baseIndentation = lineIndentation
-                isFirstLine = false
-            } else {
-                str += lineContent.withIndentation(lineIndentation - baseIndentation)
-                lines.append(IndentedLine(content: lineContent, indentation: lineIndentation))
-            }
-        }
-        if linesLength > range.length {
-            let delta = linesLength - range.length
-            str = String(str.dropLast(delta))
-            if let indentation = lines.last?.indentation {
-                lines = lines.dropLast()
-                lines.append(IndentedLine(content: str, indentation: indentation))
-            }
+        let startingLocation: Int = range.location
+        let baseIndentation: Int = (try? tendrilTree.indentation(at: range.location)) ?? 0
+        tendrilTree.enumerateLines(in: range) { _, lineRange, lineIndentation in
+            indentations.append(Indent(location: lineRange.location - startingLocation, depth: lineIndentation - baseIndentation))
         }
 
-        return (str, lines)
-    }
-
-    func pasteLines(lines: [IndentedLine], at range: NSRange) {
-        //        replaceCharacters(in: range, with: lines)
+        return PasteboardChunk(content: content, indents: indentations)
     }
 }
 
