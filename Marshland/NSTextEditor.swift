@@ -71,12 +71,12 @@ struct NSTextEditor: NSViewRepresentable {
         // for insertTab and insertBacktab, with selectedRange()
         func indent(_ range: NSRange, depth: Int, in textView: NSTextView) {
             if range.length == 0 {
-                self.indent([(range.location, depth)], in: textView)
+                self.indent([Indent(location: range.location, depth: depth)], in: textView)
             } else {
-                var indentations = [(Int, Int)]()
+                var indentations = [Indent]()
                 (textView.string as NSString).enumerateSubstrings(in: range, options: .byLines) {
                     (_, range, enclosingRange, _) in
-                    indentations.append((range.location, depth))
+                    indentations.append(Indent(location: range.location, depth: depth))
                 }
                 self.indent(indentations, in: textView)
             }
@@ -87,23 +87,23 @@ struct NSTextEditor: NSViewRepresentable {
         }
 
         func indent(
-            _ indents: [(location: Int, depth: Int)],
+            _ indents: [Indent],
             in textView: NSTextView
         ) {
             guard !indents.isEmpty else { return }
 
-            var undoIndents = [(location: Int, depth: Int)]()
-            for (location, depth) in indents {
-                if depth == 0 { continue }
+            var undoIndents = [Indent]()
+            for indent in indents {
+                if indent.depth == 0 { continue }
 
                 do {
-                    let currentDepth = try textStorage.indentation(at: location)
-                    if currentDepth + depth < 0 {
-                        try textStorage.indent(depth: -currentDepth, at: location)
-                        undoIndents.append((location: location, depth: currentDepth))
+                    let currentDepth = try textStorage.indentation(at: indent.location)
+                    if currentDepth + indent.depth < 0 {
+                        try textStorage.indent(depth: -currentDepth, at: indent.location)
+                        undoIndents.append(Indent(location: indent.location, depth: currentDepth))
                     } else {
-                        try textStorage.indent(depth: depth, at: location)
-                        undoIndents.append((location: location, depth: -depth))
+                        try textStorage.indent(depth: indent.depth, at: indent.location)
+                        undoIndents.append(Indent(location: indent.location, depth: -indent.depth))
                     }
                 } catch {
                     fatalError()
@@ -197,7 +197,7 @@ class IndentedTextView: NSTextView {
             let insertRange = selectedRange()
             self.undoManager?.beginUndoGrouping()
             self.insertText(chunk.content as Any, replacementRange: insertRange)
-            let tempIs = chunk.indents.map { (location: $0.location + insertRange.location, depth: $0.depth) }
+            let tempIs = chunk.indents.map { Indent(location: $0.location + insertRange.location, depth: $0.depth) }
             (self.delegate as? NSTextEditor.Coordinator)?.indent(tempIs, in: self)
             self.undoManager?.endUndoGrouping()
 
