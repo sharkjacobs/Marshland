@@ -59,23 +59,10 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
             print("Error replacing characters: \(error)")
             return
         }
-        edited([.editedCharacters], range: range, changeInLength: str.utf16.count - range.length)
-
-        endEditing()
-    }
-
-    override func deleteCharacters(in range: NSRange) {
-        backingStorage.deleteCharacters(in: range)
-
-        beginEditing()
-        do {
-            try tendrilTree.delete(range: range)
-            // TODO: restore the indentation of deleted lines upon undo
-        } catch {
-            print("Error deleting characters: \(error)")
-            return
+        if str.isEmpty {
+            updateIndentationOfAttribute(for: NSRange(location: range.location, length: 0))
         }
-        edited([.editedCharacters], range: range, changeInLength: -range.length)
+        edited([.editedCharacters], range: range, changeInLength: str.utf16.count - range.length)
 
         endEditing()
     }
