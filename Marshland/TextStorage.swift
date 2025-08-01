@@ -59,12 +59,12 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
             print("Error replacing characters: \(error)")
             return
         }
+        edited([.editedCharacters], range: range, changeInLength: str.utf16.count - range.length)
+        endEditing()
+
         if str.isEmpty {
             updateIndentationOfAttribute(for: NSRange(location: range.location, length: 0))
         }
-        edited([.editedCharacters], range: range, changeInLength: str.utf16.count - range.length)
-
-        endEditing()
     }
 
     // MARK: - Attributes
