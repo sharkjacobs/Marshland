@@ -9,9 +9,61 @@ import AppKit
 import SwiftUI
 import TendrilTree
 
+// ObservableObject bridge for menu actions
+class EditorBridge: ObservableObject {
+    weak var textView: NSTextView?
+    weak var coordinator: NSTextEditor.Coordinator?
+}
+
 struct NSTextEditor: NSViewRepresentable {
     @Binding var text: String
     var customize: (NSTextView) -> Void = { _ in }
+    @EnvironmentObject var bridge: EditorBridge
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView: NSScrollView = IndentedTextView.scrollableTextView()
+        let textView: NSTextView = scrollView.documentView as! NSTextView
+        textView.delegate = context.coordinator
+        textView.textContainerInset = .init(width: 0, height: 2)
+        textView.allowsUndo = true
+        textView.typingAttributes = [
+            .font: NSFont.preferredFont(forTextStyle: .body),
+            .foregroundColor: NSColor.labelColor,
+        ]
+        textView.isContinuousSpellCheckingEnabled = true
+        textView.isGrammarCheckingEnabled = true
+        textView.enclosingScrollView?.focusRingType = .exterior
+        textView.isAutomaticTextCompletionEnabled = false
+        scrollView.borderType = .bezelBorder
+
+        context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
+
+        customize(textView)
+
+        //        textView.string = text
+
+        context.coordinator.textStorage.updateIndentationOfAttribute(
+            for: NSRange(location: 0, length: textView.string.utf16.count))
+
+        bridge.textView = textView
+        bridge.coordinator = context.coordinator
+
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        //        guard let textView = nsView.documentView as? NSTextView else { return }
+        //
+        //        if textView.string != text {
+        //            let range = textView.selectedRange()
+        //            textView.string = text
+        //            textView.setSelectedRange(range)
+        //        }
+    }
+
+    // MARK: - Coordinator
+
+    func makeCoordinator() -> Coordinator { Coordinator(field: self) }
 
     class Coordinator: NSObject {
         let tendrilTree: TendrilTree
@@ -66,6 +118,8 @@ struct NSTextEditor: NSViewRepresentable {
 
             self.normalizeAttributes()
         }
+
+        // MARK: - Indent
 
         // indent(range:) is called in NSTextViewDelegate.textView(_:doCommandBy:)
         // for insertTab and insertBacktab, with selectedRange()
@@ -123,46 +177,20 @@ struct NSTextEditor: NSViewRepresentable {
                 target.indent(undoIndents, in: textView)
             }
         }
-    }
 
-    func makeCoordinator() -> Coordinator { Coordinator(field: self) }
+        // MARK: - Collapse/expand
 
-    func makeNSView(context: Context) -> NSScrollView {
-        let scrollView: NSScrollView = IndentedTextView.scrollableTextView()
-        let textView: NSTextView = scrollView.documentView as! NSTextView
-        textView.delegate = context.coordinator
-        textView.textContainerInset = .init(width: 0, height: 2)
-        textView.allowsUndo = true
-        textView.typingAttributes = [
-            .font: NSFont.preferredFont(forTextStyle: .body),
-            .foregroundColor: NSColor.labelColor,
-        ]
-        textView.isContinuousSpellCheckingEnabled = true
-        textView.isGrammarCheckingEnabled = true
-        textView.enclosingScrollView?.focusRingType = .exterior
-        textView.isAutomaticTextCompletionEnabled = false
-        scrollView.borderType = .bezelBorder
+        func collapse(_ range: NSRange, in textView: NSTextView) {
+            try! textStorage.collapse(range: range)
+            // get collapse range
+            // remove collapse range (this registers with undoManager for free)
+            // register appropriate tendrilTree.expand with undoManager
+            // adjust selection range?
+        }
 
-        context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
-
-        customize(textView)
-
-        //        textView.string = text
-
-        context.coordinator.textStorage.updateIndentationOfAttribute(
-            for: NSRange(location: 0, length: textView.string.utf16.count))
-
-        return scrollView
-    }
-
-    func updateNSView(_ nsView: NSScrollView, context: Context) {
-        //        guard let textView = nsView.documentView as? NSTextView else { return }
-        //
-        //        if textView.string != text {
-        //            let range = textView.selectedRange()
-        //            textView.string = text
-        //            textView.setSelectedRange(range)
-        //        }
+        func expand(_ range: NSRange, in textView: NSTextView) {
+            try! textStorage.expand(range: range)
+        }
     }
 }
 
