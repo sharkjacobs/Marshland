@@ -71,7 +71,19 @@ struct NSTextEditor: NSViewRepresentable {
         // for insertTab and insertBacktab, with selectedRange()
         func indent(_ range: NSRange, depth: Int, in textView: NSTextView) {
             if range.length == 0 {
-                self.indent([Indent(location: range.location, depth: depth)], in: textView)
+                let loc = range.location
+                self.indent([Indent(location: loc, depth: depth)], in: textView)
+                let str = (textView.string as NSString)
+                if (loc == 0 || str.character(at: loc - 1) == "\n".utf16.first!)
+                    && (loc == str.length || str.character(at: loc) == "\n".utf16.first!)
+                {
+                    // if current line is empty
+                    // use invisible char to force layout to adopt new typing attribute indentation
+                    textView.undoManager?.disableUndoRegistration()
+                    textView.insertText("\u{200B}", replacementRange: NSRange(location: loc, length: 0))
+                    textView.insertText("", replacementRange: NSRange(location: loc, length: 1))
+                    textView.undoManager?.enableUndoRegistration()
+                }
             } else {
                 var indentations = [Indent]()
                 (textView.string as NSString).enumerateSubstrings(in: range, options: .byLines) {
@@ -80,10 +92,6 @@ struct NSTextEditor: NSViewRepresentable {
                 }
                 self.indent(indentations, in: textView)
             }
-            let lineRange = (textView.string as NSString).lineRange(for: range)
-            textView.layoutManager?.invalidateLayout(
-                forCharacterRange: lineRange,
-                actualCharacterRange: nil)
         }
 
         func indent(
