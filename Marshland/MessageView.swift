@@ -8,7 +8,7 @@
 import SwiftUI
 import TendrilTree
 
-extension Message: @retroactive Identifiable {
+extension Message: Identifiable {
     public var id: UUID { UUID() }
 }
 

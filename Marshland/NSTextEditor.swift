@@ -67,6 +67,8 @@ struct NSTextEditor: NSViewRepresentable {
             self.normalizeAttributes()
         }
 
+        // indent(range:) is called in NSTextViewDelegate.textView(_:doCommandBy:)
+        // for insertTab and insertBacktab, with selectedRange()
         func indent(_ range: NSRange, depth: Int, in textView: NSTextView) {
             if range.length == 0 {
                 self.indent([(range.location, depth)], in: textView)
