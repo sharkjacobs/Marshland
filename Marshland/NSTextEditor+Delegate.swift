@@ -53,7 +53,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         to base: NSString,
         in range: NSRange,
         inserting str: String?
-    ) -> (newRange: NSRange, newString: String?, indents: [(location: Int, depth: Int)])? {
+    ) -> (newRange: NSRange, newString: String?, indents: [Indent])? {
         let tabUTF16 = "\t".utf16.first!
         let newLineUTF16 = "\n".utf16.first!
         let isRangeAtBeginningOfLine = range.location == 0 || (base.character(at: range.location - 1) == newLineUTF16)
@@ -76,7 +76,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
             if isRangeAtBeginningOfLine, tabsAfterRange > 0 {
                 // Deletion moves a tab to the beginning of the line, so convert it to an indent.
                 let newRange = NSRange(location: range.location, length: range.length + tabsAfterRange)
-                return (newRange, str, [(location: range.location, depth: tabsAfterRange)])
+                return (newRange, str, [Indent(location: range.location, depth: tabsAfterRange)])
             } else {
                 // Standard deletion, no indentation change.
                 return nil
@@ -88,7 +88,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         guard let str else { fatalError() }
 
         var newString = ""
-        var indentations = [(location: Int, depth: Int)]()
+        var indentations = [Indent]()
 
         var insertionPoint = range.location
         var isFirstLineOfInsert = true
@@ -102,7 +102,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
                 let restOfLine = line[tabs.endIndex...]
 
                 newString.append(contentsOf: restOfLine)
-                indentations.append((location: insertionPoint, depth: tabs.count))
+                indentations.append(Indent(location: insertionPoint, depth: tabs.count))
                 insertionPoint += restOfLine.utf16.count
             } else {
                 newString.append(contentsOf: line)
@@ -114,7 +114,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         var deletionLength = range.length
         if newString.hasSuffix("\n"), tabsAfterRange > 0 {
             deletionLength += tabsAfterRange
-            indentations.append((location: range.location + newString.utf16.count, depth: tabsAfterRange))
+            indentations.append(Indent(location: range.location + newString.utf16.count, depth: tabsAfterRange))
         }
 
         if indentations.isEmpty {
