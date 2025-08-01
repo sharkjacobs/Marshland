@@ -51,4 +51,8 @@ extension String {
             result += line
         }
     }
+
+    func escapedTabsAndNewlines() -> String {
+        return self.replacingOccurrences(of: "\t", with: "\\t").replacingOccurrences(of: "\n", with: "\\n")
+    }
 }
