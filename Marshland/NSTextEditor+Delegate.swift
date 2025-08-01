@@ -74,7 +74,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
 
         if str?.isEmpty ?? true {
             if isRangeAtBeginningOfLine, tabsAfterRange > 0 {
-                // Deletion moves a tab to the beginning of the line, so convert it to an indent.
+                // Deletion moves tab(s) to the beginning of the line, so convert tab(s) to indent.
                 let newRange = NSRange(location: range.location, length: range.length + tabsAfterRange)
                 return (newRange, str, [Indent(location: range.location, depth: tabsAfterRange)])
             } else {
@@ -130,6 +130,23 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         replacementString: String?
     ) -> Bool {
         let textViewString = textView.string as NSString
+
+        let deletionIndents: [Indent] = {
+            var result = [Indent]()
+            let end = affectedCharRange.location + affectedCharRange.length
+            var index = affectedCharRange.location
+            let baseIndentation = try! tendrilTree.indentation(at: index)
+            while index < end {
+                if index + 1 < textViewString.length, textViewString.character(at: index) == "\n".utf16.first!,
+                    let indentation = try? tendrilTree.indentation(at: index + 1)
+                {
+                    result.append(Indent(location: index + 1, depth: -(indentation - baseIndentation)))
+                }
+                index += 1
+            }
+            return result
+        }()
+        self.indent(deletionIndents, in: textView)
 
         if let (newRange, newString, indents) = self.derivedTextEdits(
             to: textViewString, in: affectedCharRange, inserting: replacementString)
