@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		BFCB49682E0530DA0014A250 /* SwiftAnthropic in Frameworks */ = {isa = PBXBuildFile; productRef = BFCB49672E0530DA0014A250 /* SwiftAnthropic */; };
-		BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */ = {isa = PBXBuildFile; productRef = BFD8255D2DE6BCF900914255 /* TendrilTree */; };
 		BFFE2ADC2E3DE28300EB8B3C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = BFFE2ADB2E3DE28300EB8B3C /* AppIcon.icon */; };
+		BFFFCC902E3DEB6A0038876B /* TendrilTree in Frameworks */ = {isa = PBXBuildFile; productRef = BFFFCC8F2E3DEB6A0038876B /* TendrilTree */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,8 +70,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */,
 				BFCB49682E0530DA0014A250 /* SwiftAnthropic in Frameworks */,
+				BFFFCC902E3DEB6A0038876B /* TendrilTree in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +126,7 @@
 			packageProductDependencies = (
 				BFD8255D2DE6BCF900914255 /* TendrilTree */,
 				BFCB49672E0530DA0014A250 /* SwiftAnthropic */,
+				BFFFCC8F2E3DEB6A0038876B /* TendrilTree */,
 			);
 			productName = Marshland;
 			productReference = BFD824FA2DE63C4A00914255 /* Marshland.app */;
@@ -183,8 +184,8 @@
 			mainGroup = BFD824F12DE63C4A00914255;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				BFD8255C2DE6BCF900914255 /* XCLocalSwiftPackageReference "../TendrilTree" */,
 				BFCB49662E0530DA0014A250 /* XCRemoteSwiftPackageReference "SwiftAnthropic" */,
+				BFFFCC8E2E3DEB6A0038876B /* XCRemoteSwiftPackageReference "TendrilTree" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BFD824FB2DE63C4A00914255 /* Products */;
@@ -513,17 +514,18 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		BFD8255C2DE6BCF900914255 /* XCLocalSwiftPackageReference "../TendrilTree" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../TendrilTree;
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
 		BFCB49662E0530DA0014A250 /* XCRemoteSwiftPackageReference "SwiftAnthropic" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jamesrochabrun/SwiftAnthropic";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		BFFFCC8E2E3DEB6A0038876B /* XCRemoteSwiftPackageReference "TendrilTree" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gdbing/TendrilTree";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.0.0;
@@ -539,6 +541,11 @@
 		};
 		BFD8255D2DE6BCF900914255 /* TendrilTree */ = {
 			isa = XCSwiftPackageProductDependency;
+			productName = TendrilTree;
+		};
+		BFFFCC8F2E3DEB6A0038876B /* TendrilTree */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BFFFCC8E2E3DEB6A0038876B /* XCRemoteSwiftPackageReference "TendrilTree" */;
 			productName = TendrilTree;
 		};
 /* End XCSwiftPackageProductDependency section */
