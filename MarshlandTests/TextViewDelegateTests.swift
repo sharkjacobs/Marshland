@@ -71,7 +71,7 @@ struct TextViewDelegateTests {
         try #require(edits != nil)
         #expect(edits!.newRange == NSRange(location: "abc\n".utf16Length, length: "DELETION\t".utf16Length))
         #expect(edits!.indents.first?.location == 4)
-        #expect(edits!.indents.first?.level == 1)
+        #expect(edits!.indents.first?.depth == 1)
     }
 
     @Test("newline-[DELETION]-tabtabtabtab") func delete6() throws {
@@ -83,7 +83,7 @@ struct TextViewDelegateTests {
         try #require(edits != nil)
         #expect(edits!.newRange == NSRange(location: "abc\n".utf16Length, length: "DELETION\t\t\t\t".utf16Length))
         #expect(edits!.indents.first?.location == 4)
-        #expect(edits!.indents.first?.level == 4)
+        #expect(edits!.indents.first?.depth == 4)
     }
 
     @Test("[DELETION]-tab") func delete7() throws {
@@ -95,7 +95,7 @@ struct TextViewDelegateTests {
         try #require(edits != nil)
         #expect(edits!.newRange == NSRange(location: 0, length: "DELETION\t\t".utf16Length))
         #expect(edits!.indents.first?.location == 0)
-        #expect(edits!.indents.first?.level == 2)
+        #expect(edits!.indents.first?.depth == 2)
 
     }
 
@@ -188,7 +188,7 @@ struct TextViewDelegateTests {
         #expect(edits?.newRange.length == 0)
         #expect(edits?.newString == "\n")
         #expect(edits?.indents.first?.location == 4)
-        #expect(edits?.indents.first?.level == 1)
+        #expect(edits?.indents.first?.depth == 1)
     }
 
     @Test("xxx-newline-[tab-xxx-newline]-tab-xxx")
@@ -204,9 +204,9 @@ struct TextViewDelegateTests {
         #expect(edits?.newString == "d\n")
         try #require(edits?.indents.count == 2)
         #expect(edits?.indents.first?.location == 4)
-        #expect(edits?.indents.first?.level == 1)
+        #expect(edits?.indents.first?.depth == 1)
         #expect(edits?.indents[1].location == 6)
-        #expect(edits?.indents[1].level == 2)
+        #expect(edits?.indents[1].depth == 2)
     }
 
     //    @Test("Insert Empty String", arguments: prefixes, suffixes)
