@@ -1,0 +1,57 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "extended-srgb:0.20392,0.78039,0.34902,1.00000",
+      "display-p3:0.42406,0.63178,0.12452,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode-specializations" : [
+            {
+              "value" : "multiply"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : "none"
+            }
+          ],
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "John Martin (1789–1854), Macbeth (1820), oil on canvas, 86 x 65.1 cm, Scottish National Gallery, Edinburgh, Scotland. Wikimedia Commons.jpg",
+          "name" : "John Martin (1789–1854), Macbeth (1820), oil on canvas, 86 x 65.1 cm, Scottish National Gallery, Edinburgh, Scotland. Wikimedia Commons",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 2.1,
+            "translation-in-points" : [
+              286.5,
+              -272.1171875
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

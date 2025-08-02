@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		BFCB49682E0530DA0014A250 /* SwiftAnthropic in Frameworks */ = {isa = PBXBuildFile; productRef = BFCB49672E0530DA0014A250 /* SwiftAnthropic */; };
 		BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */ = {isa = PBXBuildFile; productRef = BFD8255D2DE6BCF900914255 /* TendrilTree */; };
+		BFFE2ADC2E3DE28300EB8B3C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = BFFE2ADB2E3DE28300EB8B3C /* AppIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,6 +25,7 @@
 /* Begin PBXFileReference section */
 		BFD824FA2DE63C4A00914255 /* Marshland.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Marshland.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFD8250B2DE63C4B00914255 /* MarshlandTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MarshlandTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BFFE2ADB2E3DE28300EB8B3C /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -86,6 +88,7 @@
 		BFD824F12DE63C4A00914255 = {
 			isa = PBXGroup;
 			children = (
+				BFFE2ADB2E3DE28300EB8B3C /* AppIcon.icon */,
 				BFD824FC2DE63C4A00914255 /* Marshland */,
 				BFD8250E2DE63C4B00914255 /* MarshlandTests */,
 				BFD824FB2DE63C4A00914255 /* Products */,
@@ -199,6 +202,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFFE2ADC2E3DE28300EB8B3C /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,6 +246,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Marshland/Marshland.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -282,6 +287,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Marshland/Marshland.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
