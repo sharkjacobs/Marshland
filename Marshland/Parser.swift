@@ -38,7 +38,7 @@ extension TendrilTree {
         var messages = [Message]()
         var parser: Parser?
 
-        self.enumerateLines() { content, _, indentation in
+        for (content, _, indentation) in self.lines() {
             if parser != nil {
                 if !parser!.consume(content, indentation: indentation) {
                     if let parser, let message = Message(parser: parser) {

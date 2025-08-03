@@ -136,7 +136,7 @@ extension TextStorage {
             return paragraphStyle
         }
         beginEditing()
-        tendrilTree.enumerateLines(in: range) { content, lineRange, indentation in
+        for (_, lineRange, indentation) in tendrilTree.lines(in: range) {
             backingStorage.addAttribute(
                 .paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange
             )
@@ -167,7 +167,7 @@ extension TextStorage {
 
         let startingLocation: Int = range.location
         let baseIndentation: Int = (try? tendrilTree.indentation(at: range.location)) ?? 0
-        tendrilTree.enumerateLines(in: range) { _, lineRange, lineIndentation in
+        for (_, lineRange, lineIndentation) in tendrilTree.lines(in: range) {
             indentations.append(Indent(location: lineRange.location - startingLocation, depth: lineIndentation - baseIndentation))
         }
 
