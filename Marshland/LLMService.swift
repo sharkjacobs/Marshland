@@ -96,13 +96,26 @@ private extension [Message] {
         var messages: [MessageParameter.Message] = []
         var systemPrompt: String? = UserDefaults.standard.string(forKey: "systemMessage")
 
-        for message in self {
+        var cacheCount = 0
+        for message in self.reversed() {
             let content = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
             switch message.kind {
             case .system:
                 systemPrompt = content
             case .user:
-                messages.append(MessageParameter.Message(role: .user, content: .text(content)))
+                if cacheCount < 4 {
+                    let cache = MessageParameter.Message.Content.ContentObject.cache(
+                        .init(
+                            type: .text,
+                            text: content,
+                            cacheControl: .init(type: .ephemeral)
+                        )
+                    )
+                    messages.append(MessageParameter.Message( role: .user, content: .list([cache])))
+                    cacheCount += 1
+                } else {
+                    messages.append(MessageParameter.Message(role: .user, content: .text(content)))
+                }
             case .assistant:
                 messages.append(MessageParameter.Message(role: .assistant, content: .text(content)))
             }
@@ -123,7 +136,7 @@ private extension [Message] {
 
         return MessageParameter(
             model: model,
-            messages: messages,
+            messages: messages.reversed(),
             maxTokens: 2048,
             system: .text(systemPrompt ?? ""),
             stream: true,
