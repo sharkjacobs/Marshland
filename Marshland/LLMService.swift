@@ -18,6 +18,23 @@ import TendrilTree
     var tokenInput: Int = 0
     var cacheTokenRead: Int = 0
     var cacheTokenWrite: Int = 0
+    
+    var time: Int?
+    private var timer: Timer?
+    private func startTimer() {
+        let endTime = Date().addingTimeInterval(300)
+        timer?.invalidate()
+        self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            let timeRemaining = endTime.timeIntervalSinceNow
+            
+            if timeRemaining <= 0 {
+                self.time = nil
+                timer.invalidate()
+            }
+
+            self.time = Int(timeRemaining)
+        }
+    }
 
     var messages: [Message] = []
     func reloadMessages() {
@@ -55,6 +72,7 @@ import TendrilTree
         let service = AnthropicServiceFactory.service(apiKey: anthropicApiKey, betaHeaders: betaHeaders)
 
         Task { @MainActor in
+            startTimer()
             isResponding = true
 
             defer {

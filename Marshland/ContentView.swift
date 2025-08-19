@@ -41,6 +41,19 @@ struct ContentView: View {
         }
         .animation(.default, value: showSidebar)
         .toolbar {
+            ToolbarItem(placement: .status) {
+                if let time = llm.time, llm.cacheTokenRead != 0 || llm.cacheTokenWrite != 0 {
+                    let cacheWriteString = llm.cacheTokenWrite > 0 ? "\(llm.cacheTokenWrite) → " : ""
+                    let cacheReadString = llm.cacheTokenRead > 0 ? " → \(llm.cacheTokenRead)" : ""
+                    let cacheTokens = "\(cacheWriteString)💾\(cacheReadString)"
+
+                    let minutes = time / 60
+                    let seconds = time % 60
+                    let timeString = String(format: "%d:%02d", minutes, seconds)
+                    Text(timeString + " | " + cacheTokens)
+                        .monospacedDigit()
+                }
+            }
             ToolbarItem(placement: .automatic) {
                 Button(action: {
                     llm.reloadMessages()
