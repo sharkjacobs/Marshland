@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct MarshlandApp: App {
     @StateObject private var editorBridge = EditorBridge()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         DocumentGroup(
@@ -39,10 +40,31 @@ struct MarshlandApp: App {
                 }
                 .keyboardShortcut("9", modifiers: .command)
             }
+            
+            CommandGroup(replacing: CommandGroupPlacement.appInfo) {
+                Button {
+                    openWindow(id: "about")
+                } label: {
+                    Text("About Marshland")
+                }
+                .keyboardShortcut("'", modifiers: .command)
+            }
         }
+        
         Settings {
             SettingsView()
                 .frame(width: 500)
         }
+        
+        Window("About Marshland", id: "about") {
+            AboutView()
+                .toolbar(removing: .title)
+                .toolbarBackground(.hidden, for: .windowToolbar)
+                .containerBackground(.regularMaterial, for: .window)
+                .windowMinimizeBehavior(.disabled)
+        }
+        .windowBackgroundDragBehavior(.enabled)
+        .windowResizability(.contentSize)
+        .restorationBehavior(.disabled)
     }
 }
