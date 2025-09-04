@@ -27,16 +27,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		BF73B3252E2CC5FD00B68C8D /* Exceptions for "Marshland" folder in "MarshlandTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				NSTextEditor.swift,
-				"NSTextEditor+Delegate.swift",
-				Parser.swift,
-				TextStorage.swift,
-			);
-			target = BFD8250A2DE63C4B00914255 /* MarshlandTests */;
-		};
 		BFD8251D2DE63C4B00914255 /* Exceptions for "Marshland" folder in "Marshland" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -51,7 +41,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				BFD8251D2DE63C4B00914255 /* Exceptions for "Marshland" folder in "Marshland" target */,
-				BF73B3252E2CC5FD00B68C8D /* Exceptions for "Marshland" folder in "MarshlandTests" target */,
 			);
 			path = Marshland;
 			sourceTree = "<group>";
