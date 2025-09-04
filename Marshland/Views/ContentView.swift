@@ -8,31 +8,32 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var document: MarshlandDocument
-    @State var llm: LLMService = LLMService()
     @State private var showSidebar = false
+    private var viewModel: EditorViewModel
+
+    init(document: MarshlandDocument) {
+        self.viewModel = EditorViewModel(document: document)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
             ZStack(alignment: .bottomTrailing) {
-                NSTextEditor(text: $document.text) {
-                    llm.register(textView: $0)
-                }
+                NSTextEditor(viewModel: viewModel)
                 if #available(macOS 26.0, *) {
                     Button(action: {
-                        llm.respond()
+                        viewModel.llmService.respond()
                     }) {
                         Image(systemName: "lizard.fill")
                     }
                     .buttonStyle(.glass)
                     .padding()
-                    .disabled(llm.isResponding)
+                    .disabled(viewModel.llmService.isResponding)
                 }
             }
             if showSidebar {
                 Divider()
                 ScrollView {
-                    MessagesView(messages: llm.messages)
+                    MessagesView(messages: viewModel.llmService.messages)
                 }
                 .frame(width: 320)
                 .transition(.move(edge: .trailing))
@@ -42,9 +43,9 @@ struct ContentView: View {
         .animation(.default, value: showSidebar)
         .toolbar {
             ToolbarItem(placement: .status) {
-                if let time = llm.time, llm.cacheTokenRead != 0 || llm.cacheTokenWrite != 0 {
-                    let cacheWriteString = llm.cacheTokenWrite > 0 ? "\(llm.cacheTokenWrite) → " : ""
-                    let cacheReadString = llm.cacheTokenRead > 0 ? " → \(llm.cacheTokenRead)" : ""
+                if let time = viewModel.llmService.time, viewModel.llmService.cacheTokenRead != 0 || viewModel.llmService.cacheTokenWrite != 0 {
+                    let cacheWriteString = viewModel.llmService.cacheTokenWrite > 0 ? "\(viewModel.llmService.cacheTokenWrite) → " : ""
+                    let cacheReadString = viewModel.llmService.cacheTokenRead > 0 ? " → \(viewModel.llmService.cacheTokenRead)" : ""
                     let cacheTokens = "\(cacheWriteString)💾\(cacheReadString)"
 
                     let minutes = time / 60
@@ -56,7 +57,7 @@ struct ContentView: View {
             }
             ToolbarItem(placement: .automatic) {
                 Button(action: {
-                    llm.reloadMessages()
+                    viewModel.llmService.reloadMessages()
                     showSidebar.toggle()
                 }) {
                     Image(systemName: showSidebar ? "sidebar.right" : "sidebar.right")
@@ -64,7 +65,7 @@ struct ContentView: View {
                 .help(showSidebar ? "Hide Messages" : "Show Messages")
             }
             ToolbarItem(placement: .automatic) {
-                Button(action: { llm.reloadMessages() }) {
+                Button(action: { viewModel.llmService.reloadMessages() }) {
                     Image(systemName: "arrow.clockwise")
                 }
                 .disabled(!showSidebar)

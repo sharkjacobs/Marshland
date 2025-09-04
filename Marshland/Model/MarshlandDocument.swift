@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import TendrilTree
 import UniformTypeIdentifiers
 
 extension UTType {
@@ -17,10 +18,13 @@ extension UTType {
 class MarshlandDocument: ReferenceFileDocument {
     typealias Snapshot = String
 
-    @Published var text: String
+    @Published var tree: TendrilTree
 
     init(text: String = "") {
-        self.text = text
+        self.tree = TendrilTree(content: text)
+//        self.tree.onChange = { [weak self] in
+//            self?.objectWillChange.send()
+//        }
     }
 
     static var readableContentTypes: [UTType] { [.markdown, .plainText] }
@@ -31,11 +35,11 @@ class MarshlandDocument: ReferenceFileDocument {
         else {
             throw CocoaError(.fileReadCorruptFile)
         }
-        self.text = string
+        self.tree = TendrilTree(content: string)
     }
 
     func snapshot(contentType: UTType) throws -> String {
-        return self.text
+        return self.tree.fileString
     }
 
     func fileWrapper(

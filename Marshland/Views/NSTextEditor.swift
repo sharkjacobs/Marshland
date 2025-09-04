@@ -16,8 +16,7 @@ class EditorBridge: ObservableObject {
 }
 
 struct NSTextEditor: NSViewRepresentable {
-    @Binding var text: String
-    var customize: (NSTextView) -> Void = { _ in }
+    var viewModel: EditorViewModel
     @EnvironmentObject var bridge: EditorBridge
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -37,17 +36,14 @@ struct NSTextEditor: NSViewRepresentable {
         scrollView.borderType = .bezelBorder
 
         context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
-
-        customize(textView)
-
-        //        textView.string = text
-
         context.coordinator.textStorage.updateIndentationOfAttribute(
             for: NSRange(location: 0, length: textView.string.utf16.count))
 
         bridge.textView = textView
         bridge.coordinator = context.coordinator
 
+        viewModel.llmService.register(textView: textView)
+        
         return scrollView
     }
 
@@ -63,12 +59,11 @@ struct NSTextEditor: NSViewRepresentable {
 
     // MARK: - Coordinator
 
-    func makeCoordinator() -> Coordinator { Coordinator(field: self) }
+    func makeCoordinator() -> Coordinator { Coordinator(viewModel: viewModel) }
 
     class Coordinator: NSObject {
-        let tendrilTree: TendrilTree
+        var viewModel: EditorViewModel
         let textStorage: TextStorage
-        var field: NSTextEditor?
         private var indentationDepth: Int?
         private var typingAttributesParagraphStyle: NSParagraphStyle?
         private var isHandlingInsert = false
@@ -95,7 +90,7 @@ struct NSTextEditor: NSViewRepresentable {
         }
 
         func textDidChange(_ notification: Notification) {
-            field?.text = textStorage.fileString
+            viewModel.document.objectWillChange.send()
             normalizeAttributes()
         }
 
@@ -109,13 +104,10 @@ struct NSTextEditor: NSViewRepresentable {
             textStorage.addAttributes(attributes, range: range)
         }
 
-        init(field: NSTextEditor?) {
-            self.field = field
-            self.tendrilTree = TendrilTree(content: field?.text ?? "")
-            self.textStorage = TextStorage(tendrilTree: tendrilTree)
-
+        init(viewModel: EditorViewModel) {
+            self.viewModel = viewModel
+            self.textStorage = TextStorage(tendrilTree: viewModel.document.tree) // Temp
             super.init()
-
             self.normalizeAttributes()
         }
 
