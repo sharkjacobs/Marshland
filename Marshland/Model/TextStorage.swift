@@ -11,7 +11,6 @@ import TendrilTree
 class TextStorage: NSTextStorage, @unchecked Sendable {
     private var backingStorage: NSTextStorage
     private var tendrilTree: TendrilTree
-    weak var undoManager: UndoManager?
 
     // MARK: - Initializers
 
@@ -96,31 +95,6 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
     override open var fixesAttributesLazily: Bool {
         return backingStorage.fixesAttributesLazily
     }
-
-    // MARK: - Indentation
-
-    func indent(depth: Int, at location: Int) throws {
-        if depth > 0 {
-            try tendrilTree.indent(depth: depth, range: NSRange(location: location, length: 0))
-        } else {
-            try tendrilTree.outdent(depth: depth, range: NSRange(location: location, length: 0))
-        }
-        updateIndentationOfAttribute(for: NSRange(location: location, length: 0))
-    }
-
-    func collapse(range: NSRange) throws {
-        try tendrilTree.collapse(range: range)
-    }
-
-    func expand(range: NSRange) throws {
-        try tendrilTree.expand(range: range)
-    }
-}
-
-extension TextStorage {
-    func indentation(at offset: Int) throws -> Int {
-        return try tendrilTree.indentation(at: offset)
-    }
 }
 
 extension TextStorage {
@@ -172,21 +146,5 @@ extension TextStorage {
         }
 
         return PasteboardChunk(content: content, indents: indentations)
-    }
-}
-
-// MARK: - fileString
-
-extension TextStorage {
-    var fileString: String {
-        return tendrilTree.fileString
-    }
-}
-
-// MARK: - Messages
-
-extension TextStorage {
-    func messages() -> [Message] {
-        tendrilTree.messages()
     }
 }

@@ -91,7 +91,12 @@ class EditorViewModel {
     }
     
     func indent(depth: Int, at location: Int) throws {
-        try textStorage.indent(depth: depth, at: location)
+        if depth > 0 {
+            try document.tree.indent(depth: depth, range: NSRange(location: location, length: 0))
+        } else {
+            try document.tree.outdent(depth: depth, range: NSRange(location: location, length: 0))
+        }
+        textStorage.updateIndentationOfAttribute(for: NSRange(location: location, length: 0))
     }
     
     func textDidChange() {

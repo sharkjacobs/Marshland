@@ -163,12 +163,12 @@ struct NSTextEditor: NSViewRepresentable {
 // MARK: - IndentedTextview
 
 class IndentedTextView: NSTextView {
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if let undoManager = window?.undoManager {
-            (self.textStorage as? TextStorage)?.undoManager = undoManager
-        }
-    }
+//    override func viewDidMoveToWindow() {
+//        super.viewDidMoveToWindow()
+//        if let undoManager = window?.undoManager {
+//            (self.textStorage as? TextStorage)?.undoManager = undoManager
+//        }
+//    }
 
     /// Overrides the default copy behavior triggered by ⌘C or the Edit > Copy menu item.
     /// This method is part of the NSResponder chain.
