@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var showSidebar = false
-    private var viewModel: EditorViewModel
+    @State private var viewModel: EditorViewModel
 
     init(document: MarshlandDocument) {
         self.viewModel = EditorViewModel(document: document)
@@ -43,15 +43,8 @@ struct ContentView: View {
         .animation(.default, value: showSidebar)
         .toolbar {
             ToolbarItem(placement: .status) {
-                if let time = viewModel.llmService.time, viewModel.llmService.cacheTokenRead != 0 || viewModel.llmService.cacheTokenWrite != 0 {
-                    let cacheWriteString = viewModel.llmService.cacheTokenWrite > 0 ? "\(viewModel.llmService.cacheTokenWrite) → " : ""
-                    let cacheReadString = viewModel.llmService.cacheTokenRead > 0 ? " → \(viewModel.llmService.cacheTokenRead)" : ""
-                    let cacheTokens = "\(cacheWriteString)💾\(cacheReadString)"
-
-                    let minutes = time / 60
-                    let seconds = time % 60
-                    let timeString = String(format: "%d:%02d", minutes, seconds)
-                    Text(timeString + " | " + cacheTokens)
+                if let statusString = viewModel.cacheStatusString {
+                    Text(statusString)
                         .monospacedDigit()
                 }
             }
