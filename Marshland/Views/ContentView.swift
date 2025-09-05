@@ -20,19 +20,19 @@ struct ContentView: View {
                 NSTextEditor(viewModel: viewModel)
                 if #available(macOS 26.0, *) {
                     Button(action: {
-                        viewModel.llmService.respond()
+                        viewModel.llmRespond()
                     }) {
                         Image(systemName: "lizard.fill")
                     }
                     .buttonStyle(.glass)
                     .padding()
-                    .disabled(viewModel.llmService.isResponding)
+                    .disabled(viewModel.isLLMResponding)
                 }
             }
             if viewModel.isSidebarVisible {
                 Divider()
                 ScrollView {
-                    MessagesView(messages: viewModel.llmService.messages)
+                    MessagesView(messages: viewModel.messages)
                 }
                 .frame(width: 320)
                 .transition(.move(edge: .trailing))
@@ -42,7 +42,7 @@ struct ContentView: View {
         .animation(.default, value: viewModel.isSidebarVisible)
         .toolbar {
             ToolbarItem(placement: .status) {
-                if let statusString = viewModel.cacheStatusString {
+                if let statusString = viewModel.llmStatusMessage {
                     Text(statusString)
                         .monospacedDigit()
                 }
@@ -56,7 +56,7 @@ struct ContentView: View {
                 .help(viewModel.isSidebarVisible ? "Hide Messages" : "Show Messages")
             }
             ToolbarItem(placement: .automatic) {
-                Button(action: { viewModel.llmService.reloadMessages() }) {
+                Button(action: { viewModel.reloadMessages() }) {
                     Image(systemName: "arrow.clockwise")
                 }
                 .disabled(!viewModel.isSidebarVisible)

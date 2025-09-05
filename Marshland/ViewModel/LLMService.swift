@@ -36,11 +36,6 @@ import TendrilTree
         }
     }
 
-    var messages: [Message] = []
-    func reloadMessages() {
-        messages = textStorage?.messages() ?? []
-    }
-
     private weak var textView: NSTextView?
     private var textStorage: TextStorage? {
         textView?.layoutManager?.textStorage as? TextStorage
@@ -60,7 +55,7 @@ import TendrilTree
         textView.insertAttributedAIResponse(response)
     }
 
-    func respond() {
+    func respond() async {
         guard
             let messages = textStorage?.messages(),
             let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey")
@@ -71,21 +66,20 @@ import TendrilTree
         let betaHeaders = ["prompt-caching-2024-07-31"]
         let service = AnthropicServiceFactory.service(apiKey: anthropicApiKey, betaHeaders: betaHeaders)
 
-        Task { @MainActor in
-            startTimer()
-            isResponding = true
-
-            defer {
-                isResponding = false
-                reloadMessages()
-            }
-
+        startTimer()
+        isResponding = true
+        
+        defer {
+            isResponding = false
+        }
+        
+        do {
             let stream = try await service.streamMessage(parameters)
             for try await result in stream {
                 if let content = result.delta?.text {
                     insertAIResponse(content)
                 }
-
+                
                 if let createdCacheTokens = result.message?.usage.cacheCreationInputTokens {
                     self.cacheTokenWrite = createdCacheTokens
                 }
@@ -99,6 +93,8 @@ import TendrilTree
                     self.tokenOutput = outputTokens
                 }
             }
+        } catch {
+            
         }
     }
 }

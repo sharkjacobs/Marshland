@@ -6,19 +6,24 @@
 //
 
 import Foundation
+import AppKit
 
 @Observable
 class EditorViewModel {
-    var document: MarshlandDocument
-    var llmService: LLMService
+    private var document: MarshlandDocument
+    private let llmService: LLMService
+    
+    var textStorage: TextStorage
     
     var isSidebarVisible: Bool = false
-    /// Returns the formatted cache status string for use in the toolbar, or nil if not relevant.
-    var cacheStatusString: String?
+    var llmStatusMessage: String?
+    var isLLMResponding: Bool = false
+    var messages = [Message]()
 
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
         self.document = document
         self.llmService = llmService
+        self.textStorage = TextStorage(tendrilTree: document.tree)
 
         self.observeLLMService()
     }
@@ -27,7 +32,7 @@ class EditorViewModel {
         withObservationTracking {
             _ = llmService.time
         } onChange: { [weak self] in
-            self?.cacheStatusString = {
+            self?.llmStatusMessage = {
                 guard
                     let llmService = self?.llmService,
                     let time = llmService.time,
@@ -50,8 +55,32 @@ class EditorViewModel {
     }
     
     func toggleSidebar() {
-        llmService.reloadMessages()
+        if isSidebarVisible == false {
+            reloadMessages()
+        }
         isSidebarVisible.toggle()
     }
+    
+    func llmRespond() {
+        Task { @MainActor in
+            await llmService.respond()
+            reloadMessages()
+        }
+    }
+    
+    func reloadMessages() {
+        messages = self.document.tree.messages()
+    }
 
+    func register(textView: NSTextView) {
+        self.llmService.register(textView: textView)
+    }
+    
+    func indentation(at offset: Int) throws -> Int {
+        return try document.tree.indentation(at: offset)
+    }
+    
+    func textDidChange() {
+        document.objectWillChange.send()
+    }
 }

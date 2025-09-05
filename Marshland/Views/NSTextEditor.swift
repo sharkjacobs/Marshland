@@ -42,7 +42,7 @@ struct NSTextEditor: NSViewRepresentable {
         bridge.textView = textView
         bridge.coordinator = context.coordinator
 
-        viewModel.llmService.register(textView: textView)
+        viewModel.register(textView: textView)
         
         return scrollView
     }
@@ -80,7 +80,7 @@ struct NSTextEditor: NSViewRepresentable {
                 return paragraphStyle
             }
 
-            if let indentation = try? textStorage.indentation(at: textView.selectedRange().location),
+            if let indentation = try? viewModel.indentation(at: textView.selectedRange().location),
                 indentation != indentationDepth
             {
                 indentationDepth = indentation
@@ -90,7 +90,7 @@ struct NSTextEditor: NSViewRepresentable {
         }
 
         func textDidChange(_ notification: Notification) {
-            viewModel.document.objectWillChange.send()
+            viewModel.textDidChange()
             normalizeAttributes()
         }
 
@@ -106,7 +106,7 @@ struct NSTextEditor: NSViewRepresentable {
 
         init(viewModel: EditorViewModel) {
             self.viewModel = viewModel
-            self.textStorage = TextStorage(tendrilTree: viewModel.document.tree) // Temp
+            self.textStorage = viewModel.textStorage // Temp
             super.init()
             self.normalizeAttributes()
         }

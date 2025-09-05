@@ -136,10 +136,10 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
             let end = affectedCharRange.location + affectedCharRange.length
             var index = affectedCharRange.location
             
-            let baseIndentation = try! viewModel.document.tree.indentation(at: index)
+            let baseIndentation = try! viewModel.indentation(at: index)
             while index < end {
                 if index + 1 < textViewString.length, textViewString.character(at: index) == "\n".utf16.first!,
-                    let indentation = try? viewModel.document.tree.indentation(at: index + 1)
+                    let indentation = try? viewModel.indentation(at: index + 1)
                 {
                     result.append(Indent(location: index + 1, depth: -(indentation - baseIndentation)))
                 }
