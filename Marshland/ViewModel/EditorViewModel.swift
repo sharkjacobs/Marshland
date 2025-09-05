@@ -13,6 +13,7 @@ class EditorViewModel {
     private var document: MarshlandDocument
     private let llmService: LLMService
     
+    weak var textView: NSTextView?
     var textStorage: TextStorage
     
     var isSidebarVisible: Bool = false
@@ -63,7 +64,15 @@ class EditorViewModel {
     
     func llmRespond() {
         Task { @MainActor in
-            await llmService.respond()
+            reloadMessages()
+            await llmService.respond(messages: messages) {
+                /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
+                let response = NSMutableAttributedString(string: $0)
+                // let full = NSRange(location: 0, length: response.length)
+                // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
+                // response.addAttribute(.author,     value: authorName,            range: full)
+                self.textView?.insertAttributedAIResponse(response)
+            }
             reloadMessages()
         }
     }
@@ -73,7 +82,7 @@ class EditorViewModel {
     }
 
     func register(textView: NSTextView) {
-        self.llmService.register(textView: textView)
+        self.textView = textView
     }
     
     func indentation(at offset: Int) throws -> Int {
@@ -82,5 +91,11 @@ class EditorViewModel {
     
     func textDidChange() {
         document.objectWillChange.send()
+    }
+}
+
+private extension NSTextView {
+    func insertAttributedAIResponse(_ response: NSAttributedString) {
+        self.insertText(response, replacementRange: self.selectedRange())
     }
 }

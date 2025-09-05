@@ -5,14 +5,12 @@
 //  Created by Graham Bing on 2025-05-31.
 //
 
-import AppKit
 import SwiftUI
 import SwiftAnthropic
 import TendrilTree
 
-/// A simple ObservableObject that can be registered with your
-/// NSSlopeTextView and driven from a SwiftUI Button or hotkey.
-@Observable class LLMService {
+@Observable
+class LLMService {
     var isResponding: Bool = false
     var tokenOutput: Int = 0
     var tokenInput: Int = 0
@@ -36,28 +34,8 @@ import TendrilTree
         }
     }
 
-    private weak var textView: NSTextView?
-    private var textStorage: TextStorage? {
-        textView?.layoutManager?.textStorage as? TextStorage
-    }
-
-    func register(textView: NSTextView) {
-        self.textView = textView
-    }
-
-    /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
-    private func insertAIResponse(_ text: String, authorName: String = "AI") {
-        guard let textView else { return }
-        let response = NSMutableAttributedString(string: text)
-        //        let full = NSRange(location: 0, length: response.length)
-        //        response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
-        //        response.addAttribute(.author,     value: authorName,            range: full)
-        textView.insertAttributedAIResponse(response)
-    }
-
-    func respond() async {
+    func respond(messages: [Message], completion: (String) -> Void) async {
         guard
-            let messages = textStorage?.messages(),
             let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey")
         else { return }
 
@@ -77,7 +55,7 @@ import TendrilTree
             let stream = try await service.streamMessage(parameters)
             for try await result in stream {
                 if let content = result.delta?.text {
-                    insertAIResponse(content)
+                    completion(content)
                 }
                 
                 if let createdCacheTokens = result.message?.usage.cacheCreationInputTokens {
@@ -96,12 +74,6 @@ import TendrilTree
         } catch {
             
         }
-    }
-}
-
-private extension NSTextView {
-    func insertAttributedAIResponse(_ response: NSAttributedString) {
-        self.insertText(response, replacementRange: self.selectedRange())
     }
 }
 
