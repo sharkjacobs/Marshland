@@ -11,7 +11,8 @@ import Foundation
 class EditorViewModel {
     var document: MarshlandDocument
     var llmService: LLMService
-
+    
+    var isSidebarVisible: Bool = false
     /// Returns the formatted cache status string for use in the toolbar, or nil if not relevant.
     var cacheStatusString: String?
 
@@ -46,6 +47,11 @@ class EditorViewModel {
             }()
             self?.observeLLMService()
         }
+    }
+    
+    func toggleSidebar() {
+        llmService.reloadMessages()
+        isSidebarVisible.toggle()
     }
 
 }

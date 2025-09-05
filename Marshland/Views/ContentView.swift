@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var showSidebar = false
     @State private var viewModel: EditorViewModel
 
     init(document: MarshlandDocument) {
@@ -30,7 +29,7 @@ struct ContentView: View {
                     .disabled(viewModel.llmService.isResponding)
                 }
             }
-            if showSidebar {
+            if viewModel.isSidebarVisible {
                 Divider()
                 ScrollView {
                     MessagesView(messages: viewModel.llmService.messages)
@@ -40,7 +39,7 @@ struct ContentView: View {
 
             }
         }
-        .animation(.default, value: showSidebar)
+        .animation(.default, value: viewModel.isSidebarVisible)
         .toolbar {
             ToolbarItem(placement: .status) {
                 if let statusString = viewModel.cacheStatusString {
@@ -50,18 +49,17 @@ struct ContentView: View {
             }
             ToolbarItem(placement: .automatic) {
                 Button(action: {
-                    viewModel.llmService.reloadMessages()
-                    showSidebar.toggle()
+                    viewModel.toggleSidebar()
                 }) {
-                    Image(systemName: showSidebar ? "sidebar.right" : "sidebar.right")
+                    Image(systemName: "sidebar.right")
                 }
-                .help(showSidebar ? "Hide Messages" : "Show Messages")
+                .help(viewModel.isSidebarVisible ? "Hide Messages" : "Show Messages")
             }
             ToolbarItem(placement: .automatic) {
                 Button(action: { viewModel.llmService.reloadMessages() }) {
                     Image(systemName: "arrow.clockwise")
                 }
-                .disabled(!showSidebar)
+                .disabled(!viewModel.isSidebarVisible)
                 .help("Reload Messages")
             }
         }
