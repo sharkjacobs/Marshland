@@ -27,6 +27,7 @@ class EditorViewModel {
         self.textStorage = TextStorage(tendrilTree: document.tree)
 
         self.observeLLMService()
+        self.normalizeAttributes()
     }
 
     func observeLLMService() {
@@ -89,7 +90,28 @@ class EditorViewModel {
         return try document.tree.indentation(at: offset)
     }
     
+    func indent(depth: Int, at location: Int) throws {
+        try textStorage.indent(depth: depth, at: location)
+    }
+    
     func textDidChange() {
+        document.objectWillChange.send()
+        normalizeAttributes()
+    }
+
+    func normalizeAttributes() {
+        // This could be done at the layout stage instead, might be more efficient
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 14),
+            .foregroundColor: NSColor.labelColor,
+        ]
+        let range = NSRange(location: 0, length: textStorage.length)
+        textStorage.addAttributes(attributes, range: range)
+    }
+
+    func textDidChange(in range: NSRange, replacement: String) {
+        try? document.tree.delete(range: range)
+        try? document.tree.insert(content: replacement, at: range.location)
         document.objectWillChange.send()
     }
 }

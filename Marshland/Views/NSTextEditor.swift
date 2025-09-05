@@ -9,7 +9,6 @@ import AppKit
 import SwiftUI
 import TendrilTree
 
-// ObservableObject bridge for menu actions
 class EditorBridge: ObservableObject {
     weak var textView: NSTextView?
     weak var coordinator: NSTextEditor.Coordinator?
@@ -35,8 +34,8 @@ struct NSTextEditor: NSViewRepresentable {
         textView.isAutomaticTextCompletionEnabled = false
         scrollView.borderType = .bezelBorder
 
-        context.coordinator.textStorage.addLayoutManager(textView.layoutManager!)
-        context.coordinator.textStorage.updateIndentationOfAttribute(
+        viewModel.textStorage.addLayoutManager(textView.layoutManager!)
+        viewModel.textStorage.updateIndentationOfAttribute(
             for: NSRange(location: 0, length: textView.string.utf16.count))
 
         bridge.textView = textView
@@ -47,15 +46,7 @@ struct NSTextEditor: NSViewRepresentable {
         return scrollView
     }
 
-    func updateNSView(_ nsView: NSScrollView, context: Context) {
-        //        guard let textView = nsView.documentView as? NSTextView else { return }
-        //
-        //        if textView.string != text {
-        //            let range = textView.selectedRange()
-        //            textView.string = text
-        //            textView.setSelectedRange(range)
-        //        }
-    }
+    func updateNSView(_ nsView: NSScrollView, context: Context) { }
 
     // MARK: - Coordinator
 
@@ -63,10 +54,8 @@ struct NSTextEditor: NSViewRepresentable {
 
     class Coordinator: NSObject {
         var viewModel: EditorViewModel
-        let textStorage: TextStorage
         private var indentationDepth: Int?
         private var typingAttributesParagraphStyle: NSParagraphStyle?
-        private var isHandlingInsert = false
 
         func updateIndentationOfTypingAttributes(in textView: NSTextView) {
             func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
@@ -91,24 +80,11 @@ struct NSTextEditor: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             viewModel.textDidChange()
-            normalizeAttributes()
         }
-
-        func normalizeAttributes() {
-            // This could be done at the layout stage instead, might be more efficient
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 14),
-                .foregroundColor: NSColor.labelColor,
-            ]
-            let range = NSRange(location: 0, length: textStorage.length)
-            textStorage.addAttributes(attributes, range: range)
-        }
-
+        
         init(viewModel: EditorViewModel) {
             self.viewModel = viewModel
-            self.textStorage = viewModel.textStorage // Temp
             super.init()
-            self.normalizeAttributes()
         }
 
         // MARK: - Indent
@@ -151,12 +127,12 @@ struct NSTextEditor: NSViewRepresentable {
                 if indent.depth == 0 { continue }
 
                 do {
-                    let currentDepth = try textStorage.indentation(at: indent.location)
+                    let currentDepth = try viewModel.indentation(at: indent.location)
                     if currentDepth + indent.depth < 0 {
-                        try textStorage.indent(depth: -currentDepth, at: indent.location)
+                        try viewModel.indent(depth: -currentDepth, at: indent.location)
                         undoIndents.append(Indent(location: indent.location, depth: currentDepth))
                     } else {
-                        try textStorage.indent(depth: indent.depth, at: indent.location)
+                        try viewModel.indent(depth: indent.depth, at: indent.location)
                         undoIndents.append(Indent(location: indent.location, depth: -indent.depth))
                     }
                 } catch {
@@ -173,7 +149,6 @@ struct NSTextEditor: NSViewRepresentable {
         // MARK: - Collapse/expand
 
         func collapse(_ range: NSRange, in textView: NSTextView) {
-            try! textStorage.collapse(range: range)
             // get collapse range
             // remove collapse range (this registers with undoManager for free)
             // register appropriate tendrilTree.expand with undoManager
@@ -181,7 +156,6 @@ struct NSTextEditor: NSViewRepresentable {
         }
 
         func expand(_ range: NSRange, in textView: NSTextView) {
-            try! textStorage.expand(range: range)
         }
     }
 }

@@ -129,6 +129,15 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         shouldChangeTextIn affectedCharRange: NSRange,
         replacementString: String?
     ) -> Bool {
+        // TODO: dramatically refactor this
+        // - produce a series of operations
+        //   - e.g. [delete(range), insert(text, at: location), indent(location)]
+        // - Feed them into OperationsManager, a state machine
+        //   - coalesces and registers undos
+        //   - updates tendrilTree
+        //   - updates textStorage? (based on tendrilTree returns or callbacks)
+        //   - manages selection?
+        
         let textViewString = textView.string as NSString
 
         let deletionIndents: [Indent] = {
