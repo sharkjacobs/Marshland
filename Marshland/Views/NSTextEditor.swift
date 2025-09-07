@@ -41,7 +41,12 @@ struct NSTextEditor: NSViewRepresentable {
         bridge.textView = textView
         bridge.coordinator = context.coordinator
 
-        viewModel.register(textView: textView)
+        // Set up callback for model-to-view text updates
+        viewModel.onTextUpdate = { [weak textView] range, text in
+            Task { @MainActor in
+                textView?.insertText(text, replacementRange: range)
+            }
+        }
         
         return scrollView
     }

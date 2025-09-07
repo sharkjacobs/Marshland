@@ -12,6 +12,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         guard let textView = notification.object as? NSTextView else { return }
 
         updateIndentationOfTypingAttributes(in: textView)
+        viewModel.updateCursorPosition(textView.selectedRange().location)
     }
 
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {

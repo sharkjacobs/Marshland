@@ -13,13 +13,15 @@ class EditorViewModel {
     private var document: MarshlandDocument
     private let llmService: LLMService
     
-    weak var textView: NSTextView?
     var textStorage: TextStorage
     
     var isSidebarVisible: Bool = false
     var llmStatusMessage: String?
     var isLLMResponding: Bool = false
     var messages = [Message]()
+    
+    var onTextUpdate: ((NSRange, String) -> Void)?
+    private var currentCursorPosition: Int = 0
 
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
         self.document = document
@@ -68,11 +70,11 @@ class EditorViewModel {
             reloadMessages()
             await llmService.respond(messages: messages) {
                 /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
-                let response = NSMutableAttributedString(string: $0)
+                // let response = NSMutableAttributedString(string: $0)
                 // let full = NSRange(location: 0, length: response.length)
                 // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
                 // response.addAttribute(.author,     value: authorName,            range: full)
-                self.textView?.insertAttributedAIResponse(response)
+                self.insertText($0, at: self.currentCursorPosition)
             }
             reloadMessages()
         }
@@ -82,8 +84,8 @@ class EditorViewModel {
         messages = self.document.tree.messages()
     }
 
-    func register(textView: NSTextView) {
-        self.textView = textView
+    func updateCursorPosition(_ position: Int) {
+        currentCursorPosition = position
     }
     
     func indentation(at offset: Int) throws -> Int {
@@ -119,10 +121,15 @@ class EditorViewModel {
         try? document.tree.insert(content: replacement, at: range.location)
         document.objectWillChange.send()
     }
-}
-
-private extension NSTextView {
-    func insertAttributedAIResponse(_ response: NSAttributedString) {
-        self.insertText(response, replacementRange: self.selectedRange())
+    
+    /// - Update model
+    /// - Notify UI to update
+    /// - update cursor position for next insertion
+    /// - notify document, saved content is dirty
+    func insertText(_ text: String, at location: Int) {
+//        try? document.tree.insert(content: text, at: location)
+        onTextUpdate?(NSRange(location: location, length: 0), text)
+        currentCursorPosition = location + text.utf16.count
+        document.objectWillChange.send()
     }
 }
