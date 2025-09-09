@@ -26,7 +26,7 @@ class EditorViewModel {
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
         self.document = document
         self.llmService = llmService
-        self.textStorage = TextStorage(tendrilTree: document.tree)
+        self.textStorage = TextStorage(string: document.tree.string)
 
         self.observeLLMService()
         self.normalizeAttributes()
@@ -98,7 +98,21 @@ class EditorViewModel {
         } else {
             try document.tree.outdent(depth: depth, range: NSRange(location: location, length: 0))
         }
-        textStorage.updateIndentationOfAttribute(for: NSRange(location: location, length: 0))
+        updateIndentationAttributes(for: NSRange(location: location, length: 0))
+    }
+    
+    func tendrilTreeDelete(range: NSRange) throws {
+        try document.tree.delete(range: range)
+    }
+    
+    func tendrilTreeInsert(content: String, at location: Int) throws {
+        try document.tree.insert(content: content, at: location)
+    }
+    
+    func updateIndentationAttributes(for range: NSRange) {
+        let lines = document.tree.lines(in: range)
+        let linesForTextStorage = lines.map { (_, lineRange, indentation) in (lineRange, indentation) }
+        textStorage.updateIndentationOfAttribute(lines: linesForTextStorage)
     }
     
     func textDidChange() {

@@ -162,12 +162,29 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         if let (newRange, newString, indents) = self.derivedTextEdits(
             to: textViewString, in: affectedCharRange, inserting: replacementString)
         {
+            // Update TendrilTree with the derived operations
+            do {
+                try viewModel.tendrilTreeDelete(range: newRange)
+                try viewModel.tendrilTreeInsert(content: newString ?? "", at: newRange.location)
+            } catch {
+                print("Error updating TendrilTree: \(error)")
+                return false
+            }
+            
             textView.undoManager?.beginUndoGrouping()
             textView.insertText(newString as Any, replacementRange: newRange)
             self.indent(indents, in: textView)
             textView.undoManager?.endUndoGrouping()
             return false
         } else {
+            // Update TendrilTree with the standard operations
+            do {
+                try viewModel.tendrilTreeDelete(range: affectedCharRange)
+                try viewModel.tendrilTreeInsert(content: replacementString ?? "", at: affectedCharRange.location)
+            } catch {
+                print("Error updating TendrilTree: \(error)")
+                return false
+            }
             return true
         }
     }

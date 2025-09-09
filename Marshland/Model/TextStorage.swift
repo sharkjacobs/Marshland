@@ -6,17 +6,14 @@
 //
 
 import AppKit
-import TendrilTree
 
 class TextStorage: NSTextStorage, @unchecked Sendable {
     private var backingStorage: NSTextStorage
-    private var tendrilTree: TendrilTree
 
     // MARK: - Initializers
 
-    init(tendrilTree: TendrilTree = TendrilTree()) {
-        self.tendrilTree = tendrilTree
-        self.backingStorage = NSTextStorage(string: tendrilTree.string)
+    override init(string: String = "") {
+        self.backingStorage = NSTextStorage(string: string)
         super.init()
     }
 
@@ -51,19 +48,8 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
         backingStorage.replaceCharacters(in: range, with: str)
 
         beginEditing()
-        do {
-            try tendrilTree.delete(range: range)
-            try tendrilTree.insert(content: str, at: range.location)
-        } catch {
-            print("Error replacing characters: \(error)")
-            return
-        }
         edited([.editedCharacters], range: range, changeInLength: str.utf16.count - range.length)
         endEditing()
-
-        if str.isEmpty {
-            updateIndentationOfAttribute(for: NSRange(location: range.location, length: 0))
-        }
     }
 
     // MARK: - Attributes
@@ -98,7 +84,7 @@ class TextStorage: NSTextStorage, @unchecked Sendable {
 }
 
 extension TextStorage {
-    func updateIndentationOfAttribute(for range: NSRange) {
+    func updateIndentationOfAttribute(lines: [(NSRange, Int)]) {
         func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
             let baseIndentation = 15
             let indentSize = 20
@@ -110,7 +96,7 @@ extension TextStorage {
             return paragraphStyle
         }
         beginEditing()
-        for (_, lineRange, indentation) in tendrilTree.lines(in: range) {
+        for (lineRange, indentation) in lines {
             backingStorage.addAttribute(
                 .paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange
             )
@@ -133,15 +119,14 @@ struct PasteboardChunk: Codable {
 }
 
 extension TextStorage {
-    func copiedData(for range: NSRange) -> PasteboardChunk? {
+    func copiedData(for range: NSRange, baseIndentation: Int, lines: [(String, NSRange, Int)]) -> PasteboardChunk? {
         guard range.upperBound <= length else { return nil }
 
         let content: String = (backingStorage.string as NSString).substring(with: range)
         var indentations = [Indent]()
 
         let startingLocation: Int = range.location
-        let baseIndentation: Int = (try? tendrilTree.indentation(at: range.location)) ?? 0
-        for (_, lineRange, lineIndentation) in tendrilTree.lines(in: range) {
+        for (_, lineRange, lineIndentation) in lines {
             indentations.append(Indent(location: lineRange.location - startingLocation, depth: lineIndentation - baseIndentation))
         }
 

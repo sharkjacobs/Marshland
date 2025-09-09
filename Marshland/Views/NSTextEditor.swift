@@ -35,8 +35,7 @@ struct NSTextEditor: NSViewRepresentable {
         scrollView.borderType = .bezelBorder
 
         viewModel.textStorage.addLayoutManager(textView.layoutManager!)
-        viewModel.textStorage.updateIndentationOfAttribute(
-            for: NSRange(location: 0, length: textView.string.utf16.count))
+        viewModel.updateIndentationAttributes(for: NSRange(location: 0, length: textView.string.utf16.count))
 
         bridge.textView = textView
         bridge.coordinator = context.coordinator
