@@ -13,7 +13,7 @@ class EditorViewModel {
     private var document: MarshlandDocument
     private let llmService: LLMService
     
-    var textStorage: TextStorage
+    var textStorage: NSTextStorage
     
     var isSidebarVisible: Bool = false
     var llmStatusMessage: String?
@@ -26,7 +26,7 @@ class EditorViewModel {
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
         self.document = document
         self.llmService = llmService
-        self.textStorage = TextStorage(string: document.tree.string)
+        self.textStorage = NSTextStorage(string: document.tree.string)
 
         self.observeLLMService()
         self.normalizeAttributes()
@@ -110,11 +110,26 @@ class EditorViewModel {
     }
     
     func updateIndentationAttributes(for range: NSRange) {
+
+        func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+            let baseIndentation = 15
+            let indentSize = 20
+            let indent = CGFloat(baseIndentation + indentSize * indentation)
+            
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.firstLineHeadIndent = indent
+            paragraphStyle.headIndent = indent
+            return paragraphStyle
+        }
+
         let lines = document.tree.lines(in: range)
-        let linesForTextStorage = lines.map { (_, lineRange, indentation) in (lineRange, indentation) }
-        textStorage.updateIndentationOfAttribute(lines: linesForTextStorage)
+        for (_, lineRange, indentation) in lines {
+            textStorage.addAttribute(
+                .paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange
+            )
+        }
     }
-    
+
     func textDidChange() {
         document.objectWillChange.send()
         normalizeAttributes()
