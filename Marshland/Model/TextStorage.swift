@@ -105,31 +105,3 @@ extension TextStorage {
         endEditing()
     }
 }
-
-// MARK: - Copy/Paste
-
-struct Indent: Codable {
-    let location: Int
-    let depth: Int
-}
-
-struct PasteboardChunk: Codable {
-    let content: String
-    let indents: [Indent]
-}
-
-extension TextStorage {
-    func copiedData(for range: NSRange, baseIndentation: Int, lines: [(String, NSRange, Int)]) -> PasteboardChunk? {
-        guard range.upperBound <= length else { return nil }
-
-        let content: String = (backingStorage.string as NSString).substring(with: range)
-        var indentations = [Indent]()
-
-        let startingLocation: Int = range.location
-        for (_, lineRange, lineIndentation) in lines {
-            indentations.append(Indent(location: lineRange.location - startingLocation, depth: lineIndentation - baseIndentation))
-        }
-
-        return PasteboardChunk(content: content, indents: indentations)
-    }
-}

@@ -19,7 +19,7 @@ struct NSTextEditor: NSViewRepresentable {
     @EnvironmentObject var bridge: EditorBridge
 
     func makeNSView(context: Context) -> NSScrollView {
-        let scrollView: NSScrollView = IndentedTextView.scrollableTextView()
+        let scrollView: NSScrollView = MarshlandTextView.scrollableTextView()
         let textView: NSTextView = scrollView.documentView as! NSTextView
         textView.delegate = context.coordinator
         textView.textContainerInset = .init(width: 0, height: 2)
@@ -166,7 +166,7 @@ struct NSTextEditor: NSViewRepresentable {
 
 // MARK: - IndentedTextview
 
-class IndentedTextView: NSTextView {
+class MarshlandTextView: NSTextView {
 //    override func viewDidMoveToWindow() {
 //        super.viewDidMoveToWindow()
 //        if let undoManager = window?.undoManager {
@@ -180,8 +180,8 @@ class IndentedTextView: NSTextView {
         let range = self.selectedRange()
 
         guard range.length > 0,
-            let textStorage = self.textStorage as? TextStorage,
-            let chunk: PasteboardChunk = textStorage.copiedData(for: range)
+            let coordinator = self.delegate as? NSTextEditor.Coordinator,
+            let chunk: PasteboardChunk = coordinator.viewModel.copiedData(for: range)
         else {
             super.copy(sender)
             return

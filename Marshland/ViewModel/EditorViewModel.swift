@@ -146,4 +146,30 @@ class EditorViewModel {
         currentCursorPosition = location + text.utf16.count
         document.objectWillChange.send()
     }
+    
+    func copiedData(for range: NSRange) -> PasteboardChunk? {
+        guard let baseIndentation = try? document.tree.indentation(at: range.location) else {
+            return nil
+        }
+        
+        var indents = [Indent]()
+        for (_, lineRange, indentation) in document.tree.lines(in: range) {
+            indents.append(Indent(
+                location: lineRange.location - range.location,
+                depth: indentation - baseIndentation
+            ))
+        }
+        
+        return PasteboardChunk(content: (document.tree.string as NSString).substring(with: range), indents: indents)
+    }
+}
+
+struct Indent: Codable {
+    let location: Int
+    let depth: Int
+}
+
+struct PasteboardChunk: Codable {
+    let content: String
+    let indents: [Indent]
 }
