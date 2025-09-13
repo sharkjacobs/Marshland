@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 import TendrilTree
+import STTextKitPlus
 
 class EditorBridge: ObservableObject {
     weak var textView: NSTextView?
@@ -33,9 +34,11 @@ struct NSTextEditor: NSViewRepresentable {
         textView.enclosingScrollView?.focusRingType = .exterior
         textView.isAutomaticTextCompletionEnabled = false
         scrollView.borderType = .bezelBorder
-
-        viewModel.textStorage.addLayoutManager(textView.layoutManager!)
-        viewModel.updateIndentationAttributes(for: NSRange(location: 0, length: textView.string.utf16.count))
+        
+        let layoutManager = textView.textContainer?.textLayoutManager
+        layoutManager?.delegate = context.coordinator
+        let textContentStorage = layoutManager?.textContentManager as? NSTextContentStorage
+        textContentStorage?.delegate = context.coordinator
 
         bridge.textView = textView
         bridge.coordinator = context.coordinator
@@ -46,6 +49,8 @@ struct NSTextEditor: NSViewRepresentable {
                 textView?.insertText(text, replacementRange: range)
             }
         }
+        
+        textView.string = viewModel.string
         
         return scrollView
     }
@@ -141,6 +146,21 @@ struct NSTextEditor: NSViewRepresentable {
                     }
                 } catch {
                     fatalError()
+                }
+                let nsString = textView.string as NSString
+                let pRange = nsString.paragraphRange(for: NSRange(location: indent.location, length: 0))
+                if let layoutManager = textView.textContainer?.textLayoutManager,
+                   let contentStorage = layoutManager.textContentManager as? NSTextContentStorage {
+                    contentStorage.performEditingTransaction {
+                        contentStorage.textStorage?.edited([.editedAttributes], range: pRange, changeInLength: 0)
+
+                        if let textContentManager = layoutManager.textContentManager,
+                           let textRange = NSTextRange(pRange, in: textContentManager) {
+                            layoutManager.invalidateLayout(for: textRange)
+                        } else {
+                            fatalError("textkit 2 😡")
+                        }
+                    }
                 }
             }
             self.updateIndentationOfTypingAttributes(in: textView)

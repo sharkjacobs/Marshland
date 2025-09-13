@@ -28,165 +28,61 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         }
     }
 
-    /// Called from shouldChangeTextIn
-    /// Tabs at the beginning of a line should be removed from the content, and the indentation for that
-    /// line should be appropriately updated in TendrilTree. Tab chars can exist within lines, and at
-    /// the end of lines, just not at the beginning. The “beginning of a line” means either location
-    /// following a newline, or location == 0.
-    ///
-    /// Specific cases to handle
-    /// - a newline is inserted before a tab
-    /// - a tab is inserted after a newline
-    /// - the chars separating a newline from a tab are deleted
-    /// - a tab and newline are inserted together
-    /// - any combination of the above
-    /// - Parameters:
-    ///   - base: string being modified
-    ///   - range: range of base string being deleted
-    ///   - str: insertion
-    /// - Returns:
-    ///   A tuple containing:
-    ///   - `newRange`: The range in the base string to be replaced.
-    ///   - `newString`: The string to insert at `newRange`, or `nil`.
-    ///   - `indents`: An array of (location, depth) pairs where indentation should be changed.
-    ///   Returns `nil` if the operation does not involve any indentation.
-    func derivedTextEdits(
-        to base: NSString,
-        in range: NSRange,
-        inserting str: String?
-    ) -> (newRange: NSRange, newString: String?, indents: [Indent])? {
-        let tabUTF16 = "\t".utf16.first!
-        let newLineUTF16 = "\n".utf16.first!
-        let isRangeAtBeginningOfLine = range.location == 0 || (base.character(at: range.location - 1) == newLineUTF16)
-
-        func tabCount(at location: Int, in str: NSString) -> Int {
-            var index = location
-            let lineRange = str.lineRange(for: NSRange(location: index, length: 0))
-            var result = 0
-            while index < lineRange.upperBound, str.character(at: index) == tabUTF16 {
-                result += 1
-                index += 1
-            }
-            return result
-        }
-        let tabsAfterRange = tabCount(at: range.upperBound, in: base)
-
-        // Deletion
-
-        if str?.isEmpty ?? true {
-            if isRangeAtBeginningOfLine, tabsAfterRange > 0 {
-                // Deletion moves tab(s) to the beginning of the line, so convert tab(s) to indent.
-                let newRange = NSRange(location: range.location, length: range.length + tabsAfterRange)
-                return (newRange, str, [Indent(location: range.location, depth: tabsAfterRange)])
-            } else {
-                // Standard deletion, no indentation change.
-                return nil
-            }
-        }
-
-        // Insertion
-
-        guard let str else { fatalError() }
-
-        var newString = ""
-        var indentations = [Indent]()
-
-        var insertionPoint = range.location
-        var isFirstLineOfInsert = true
-        str.enumerateSubstrings(in: str.startIndex..<str.endIndex, options: [.byLines, .substringNotRequired]) {
-            (_, _, enclosingRange, _) in
-            let line = str[enclosingRange]
-            let isAtStartOfLine = isFirstLineOfInsert ? isRangeAtBeginningOfLine : true
-
-            if isAtStartOfLine, line.hasPrefix("\t") {
-                let tabs = line.prefix(while: { $0 == "\t" })
-                let restOfLine = line[tabs.endIndex...]
-
-                newString.append(contentsOf: restOfLine)
-                indentations.append(Indent(location: insertionPoint, depth: tabs.count))
-                insertionPoint += restOfLine.utf16.count
-            } else {
-                newString.append(contentsOf: line)
-                insertionPoint += line.utf16.count
-            }
-            isFirstLineOfInsert = false
-        }
-
-        var deletionLength = range.length
-        if newString.hasSuffix("\n"), tabsAfterRange > 0 {
-            deletionLength += tabsAfterRange
-            indentations.append(Indent(location: range.location + newString.utf16.count, depth: tabsAfterRange))
-        }
-
-        if indentations.isEmpty {
-            return nil
-        } else {
-            return (NSRange(location: range.location, length: deletionLength), newString, indentations)
-        }
-    }
-
     func textView(
         _ textView: NSTextView,
         shouldChangeTextIn affectedCharRange: NSRange,
         replacementString: String?
     ) -> Bool {
-        // TODO: dramatically refactor this
-        // - produce a series of operations
-        //   - e.g. [delete(range), insert(text, at: location), indent(location)]
-        // - Feed them into OperationsManager, a state machine
-        //   - coalesces and registers undos
-        //   - updates tendrilTree
-        //   - updates textStorage? (based on tendrilTree returns or callbacks)
-        //   - manages selection?
+        guard let replacementString else { return true }
         
+        let sanitizedString = replacementString.replacingOccurrences(of: "\t", with: "")
+        
+        textView.undoManager?.beginUndoGrouping()
+        viewModel.textDidChange(in: affectedCharRange, replacement: sanitizedString)
         let textViewString = textView.string as NSString
-
-        let deletionIndents: [Indent] = {
-            var result = [Indent]()
-            let end = affectedCharRange.location + affectedCharRange.length
-            var index = affectedCharRange.location
-            
-            let baseIndentation = try! viewModel.indentation(at: index)
-            while index < end {
-                if index + 1 < textViewString.length, textViewString.character(at: index) == "\n".utf16.first!,
-                    let indentation = try? viewModel.indentation(at: index + 1)
-                {
-                    result.append(Indent(location: index + 1, depth: -(indentation - baseIndentation)))
-                }
-                index += 1
-            }
-            return result
-        }()
-        self.indent(deletionIndents, in: textView)
-
-        if let (newRange, newString, indents) = self.derivedTextEdits(
-            to: textViewString, in: affectedCharRange, inserting: replacementString)
-        {
-            // Update TendrilTree with the derived operations
-            do {
-                try viewModel.tendrilTreeDelete(range: newRange)
-                try viewModel.tendrilTreeInsert(content: newString ?? "", at: newRange.location)
-            } catch {
-                print("Error updating TendrilTree: \(error)")
-                return false
-            }
-            
-            textView.undoManager?.beginUndoGrouping()
-            textView.insertText(newString as Any, replacementRange: newRange)
-            self.indent(indents, in: textView)
-            textView.undoManager?.endUndoGrouping()
-            return false
-        } else {
-            // Update TendrilTree with the standard operations
-            do {
-                try viewModel.tendrilTreeDelete(range: affectedCharRange)
-                try viewModel.tendrilTreeInsert(content: replacementString ?? "", at: affectedCharRange.location)
-            } catch {
-                print("Error updating TendrilTree: \(error)")
-                return false
-            }
-            return true
+        let replacedChars = textViewString.substring(with: affectedCharRange)
+        let newStringRange = NSRange(location: affectedCharRange.location, length: sanitizedString.utf16Length)
+        let currentSelection = textView.selectedRange
+        textView.undoManager?.registerUndo(withTarget: textView) { target in
+            target.textStorage?.replaceCharacters(in: newStringRange, with: replacedChars)
+            textView.selectedRange = currentSelection
         }
-    }
+        textView.textStorage?.replaceCharacters(in: affectedCharRange, with: sanitizedString)
+        //            self.indent(indents, in: textView)
+        textView.undoManager?.endUndoGrouping()
+        
 
+        return false
+    }
+}
+
+extension NSTextEditor.Coordinator : NSTextContentStorageDelegate {
+    func textContentStorage(_ textContentStorage: NSTextContentStorage, textParagraphWith range: NSRange) -> NSTextParagraph? {
+        let originalText = textContentStorage.textStorage!.attributedSubstring(from: range)
+
+        func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+            let baseIndentation = 15
+            let indentSize = 20
+            let indent = CGFloat(baseIndentation + indentSize * indentation)
+
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.firstLineHeadIndent = indent
+            paragraphStyle.headIndent = indent
+            return paragraphStyle
+        }
+
+        let displayAttributes: [NSAttributedString.Key: AnyObject] = [
+            .font: NSFont.systemFont(ofSize: 14),
+            .foregroundColor: NSColor.labelColor,
+            .paragraphStyle: paragraphStyle(indentation: (try? viewModel.indentation(at: range.location)) ?? 0)
+        ]
+        let textWithDisplayAttributes = NSMutableAttributedString(attributedString: originalText)
+        let rangeForDisplayAttributes = NSRange(location: 0, length: textWithDisplayAttributes.length)
+        textWithDisplayAttributes.addAttributes(displayAttributes, range: rangeForDisplayAttributes)
+        return NSTextParagraph(attributedString: textWithDisplayAttributes)
+    }
+}
+
+extension NSTextEditor.Coordinator : NSTextLayoutManagerDelegate {
+    
 }

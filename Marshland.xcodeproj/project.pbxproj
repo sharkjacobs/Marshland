@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BFA672D22E754D5B0071B665 /* STTextKitPlus in Frameworks */ = {isa = PBXBuildFile; productRef = BFA672D12E754D5B0071B665 /* STTextKitPlus */; };
 		BFCB49682E0530DA0014A250 /* SwiftAnthropic in Frameworks */ = {isa = PBXBuildFile; productRef = BFCB49672E0530DA0014A250 /* SwiftAnthropic */; };
 		BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */ = {isa = PBXBuildFile; productRef = BFD8255D2DE6BCF900914255 /* TendrilTree */; };
 /* End PBXBuildFile section */
@@ -59,6 +60,7 @@
 			files = (
 				BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */,
 				BFCB49682E0530DA0014A250 /* SwiftAnthropic in Frameworks */,
+				BFA672D22E754D5B0071B665 /* STTextKitPlus in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +114,7 @@
 			packageProductDependencies = (
 				BFD8255D2DE6BCF900914255 /* TendrilTree */,
 				BFCB49672E0530DA0014A250 /* SwiftAnthropic */,
+				BFA672D12E754D5B0071B665 /* STTextKitPlus */,
 			);
 			productName = Marshland;
 			productReference = BFD824FA2DE63C4A00914255 /* Marshland.app */;
@@ -171,6 +174,7 @@
 			packageReferences = (
 				BFD8255C2DE6BCF900914255 /* XCLocalSwiftPackageReference "../TendrilTree" */,
 				BFCB49662E0530DA0014A250 /* XCRemoteSwiftPackageReference "SwiftAnthropic" */,
+				BFA672D02E754D5B0071B665 /* XCRemoteSwiftPackageReference "STTextKitPlus" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BFD824FB2DE63C4A00914255 /* Products */;
@@ -504,6 +508,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		BFA672D02E754D5B0071B665 /* XCRemoteSwiftPackageReference "STTextKitPlus" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/krzyzanowskim/STTextKitPlus";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.10;
+			};
+		};
 		BFCB49662E0530DA0014A250 /* XCRemoteSwiftPackageReference "SwiftAnthropic" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jamesrochabrun/SwiftAnthropic";
@@ -515,6 +527,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		BFA672D12E754D5B0071B665 /* STTextKitPlus */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BFA672D02E754D5B0071B665 /* XCRemoteSwiftPackageReference "STTextKitPlus" */;
+			productName = STTextKitPlus;
+		};
 		BFCB49672E0530DA0014A250 /* SwiftAnthropic */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BFCB49662E0530DA0014A250 /* XCRemoteSwiftPackageReference "SwiftAnthropic" */;

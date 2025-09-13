@@ -12,13 +12,12 @@ import AppKit
 class EditorViewModel {
     private var document: MarshlandDocument
     private let llmService: LLMService
-    
-    var textStorage: NSTextStorage
-    
+        
     var isSidebarVisible: Bool = false
     var llmStatusMessage: String?
     var isLLMResponding: Bool = false
     var messages = [Message]()
+    var string: String { document.tree.string }
     
     var onTextUpdate: ((NSRange, String) -> Void)?
     private var currentCursorPosition: Int = 0
@@ -26,10 +25,8 @@ class EditorViewModel {
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
         self.document = document
         self.llmService = llmService
-        self.textStorage = NSTextStorage(string: document.tree.string)
 
         self.observeLLMService()
-        self.normalizeAttributes()
     }
 
     func observeLLMService() {
@@ -98,7 +95,7 @@ class EditorViewModel {
         } else {
             try document.tree.outdent(depth: depth, range: NSRange(location: location, length: 0))
         }
-        updateIndentationAttributes(for: NSRange(location: location, length: 0))
+//        updateIndentationAttributes(for: NSRange(location: location, length: 0))
     }
     
     func tendrilTreeDelete(range: NSRange) throws {
@@ -109,40 +106,8 @@ class EditorViewModel {
         try document.tree.insert(content: content, at: location)
     }
     
-    func updateIndentationAttributes(for range: NSRange) {
-
-        func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
-            let baseIndentation = 15
-            let indentSize = 20
-            let indent = CGFloat(baseIndentation + indentSize * indentation)
-            
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.firstLineHeadIndent = indent
-            paragraphStyle.headIndent = indent
-            return paragraphStyle
-        }
-
-        let lines = document.tree.lines(in: range)
-        for (_, lineRange, indentation) in lines {
-            textStorage.addAttribute(
-                .paragraphStyle, value: paragraphStyle(indentation: indentation), range: lineRange
-            )
-        }
-    }
-
     func textDidChange() {
         document.objectWillChange.send()
-        normalizeAttributes()
-    }
-
-    func normalizeAttributes() {
-        // This could be done at the layout stage instead, might be more efficient
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 14),
-            .foregroundColor: NSColor.labelColor,
-        ]
-        let range = NSRange(location: 0, length: textStorage.length)
-        textStorage.addAttributes(attributes, range: range)
     }
 
     func textDidChange(in range: NSRange, replacement: String) {
