@@ -13,6 +13,11 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
 
         updateIndentationOfTypingAttributes(in: textView)
         viewModel.updateCursorPosition(textView.selectedRange().location)
+        
+        DispatchQueue.main.async {
+            // TODO: don't scroll when llm inserts text
+            textView.scrollRangeToVisible(textView.selectedRange)
+        }
     }
 
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
@@ -48,10 +53,9 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
             textView.selectedRange = currentSelection
         }
         textView.textStorage?.replaceCharacters(in: affectedCharRange, with: sanitizedString)
-        //            self.indent(indents, in: textView)
+//        self.indent(indents, in: textView)
         textView.undoManager?.endUndoGrouping()
         
-
         return false
     }
 }
