@@ -43,7 +43,13 @@ struct NSTextEditor: NSViewRepresentable {
         bridge.textView = textView
         bridge.coordinator = context.coordinator
 
-        // Set up callback for model-to-view text updates
+        // Set up OperationManager's text storage updater
+        viewModel.operationManager?.textStorageUpdater = { [weak textView] range, text in
+            textView?.textStorage?.replaceCharacters(in: range, with: text)
+        }
+
+        // Set up callback for model-to-view text updates (for LLM insertions)
+        // TODO: do this directly through OperationManager
         viewModel.onTextUpdate = { [weak textView] range, text in
             Task { @MainActor in
                 textView?.insertText(text, replacementRange: range)
@@ -113,7 +119,13 @@ struct NSTextEditor: NSViewRepresentable {
             // Recompute overscroll inset
             textView.scrollViewDidResize(scrollView)
         }
-
+        
+        func didAttachToWindow(textView: NSTextView) {
+            if let undoManager = textView.window?.undoManager {
+                viewModel.operationManager?.undoManager = undoManager
+            }
+        }
+        
         // MARK: - Indent
 
         // indent(range:) is called in NSTextViewDelegate.textView(_:doCommandBy:)
@@ -205,13 +217,12 @@ struct NSTextEditor: NSViewRepresentable {
 // MARK: - IndentedTextview
 
 class MarshlandTextView: NSTextView {
-//    override func viewDidMoveToWindow() {
-//        super.viewDidMoveToWindow()
-//        if let undoManager = window?.undoManager {
-//            (self.textStorage as? TextStorage)?.undoManager = undoManager
-//        }
-//    }
-
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let coordinator = self.delegate as? NSTextEditor.Coordinator {
+            coordinator.didAttachToWindow(textView: self)
+        }
+    }
     /// Overrides the default copy behavior triggered by ⌘C or the Edit > Copy menu item.
     /// This method is part of the NSResponder chain.
     override func copy(_ sender: Any?) {

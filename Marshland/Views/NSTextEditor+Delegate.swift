@@ -39,23 +39,11 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         replacementString: String?
     ) -> Bool {
         guard let replacementString else { return true }
-        
+
         let sanitizedString = replacementString.replacingOccurrences(of: "\t", with: "")
-        
-        textView.undoManager?.beginUndoGrouping()
-        viewModel.textDidChange(in: affectedCharRange, replacement: sanitizedString)
-        let textViewString = textView.string as NSString
-        let replacedChars = textViewString.substring(with: affectedCharRange)
-        let newStringRange = NSRange(location: affectedCharRange.location, length: sanitizedString.utf16Length)
-        let currentSelection = textView.selectedRange
-        textView.undoManager?.registerUndo(withTarget: textView) { target in
-            target.textStorage?.replaceCharacters(in: newStringRange, with: replacedChars)
-            textView.selectedRange = currentSelection
-        }
-        textView.textStorage?.replaceCharacters(in: affectedCharRange, with: sanitizedString)
-//        self.indent(indents, in: textView)
-        textView.undoManager?.endUndoGrouping()
-        
+
+        viewModel.operationManager?.replaceCharacters(in: affectedCharRange, with: sanitizedString)
+
         return false
     }
 }

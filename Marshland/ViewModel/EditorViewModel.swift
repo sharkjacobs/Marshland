@@ -12,7 +12,8 @@ import AppKit
 class EditorViewModel {
     private var document: MarshlandDocument
     private let llmService: LLMService
-        
+    var operationManager: OperationManager?
+
     var isSidebarVisible: Bool = false
     var llmStatusMessage: String?
     var isLLMResponding: Bool = false
@@ -26,6 +27,7 @@ class EditorViewModel {
         self.document = document
         self.llmService = llmService
 
+        self.operationManager = OperationManager(viewModel: self)
         self.observeLLMService()
     }
 
