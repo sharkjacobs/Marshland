@@ -23,10 +23,10 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         switch commandSelector {
         case #selector(NSResponder.insertTab(_:)):
-            indent(textView.selectedRange(), depth: 1, in: textView)
+            viewModel.operationManager?.indent(textView.selectedRange())
             return true
         case #selector(NSResponder.insertBacktab(_:)):
-            indent(textView.selectedRange(), depth: -1, in: textView)
+            viewModel.operationManager?.indent(textView.selectedRange(), depth: -1)
             return true
         default:
             return false

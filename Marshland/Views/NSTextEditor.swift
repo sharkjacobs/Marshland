@@ -48,6 +48,28 @@ struct NSTextEditor: NSViewRepresentable {
             textView?.textStorage?.replaceCharacters(in: range, with: text)
         }
 
+        // Set up OperationManager's layout invalidator for indentation
+        viewModel.operationManager?.layoutInvalidator = { [weak textView] range in
+            guard let textView = textView,
+                  let layoutManager = textView.textContainer?.textLayoutManager,
+                  let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
+
+            contentStorage.performEditingTransaction {
+                contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
+
+                if let textContentManager = layoutManager.textContentManager,
+                   let textRange = NSTextRange(range, in: textContentManager) {
+                    layoutManager.invalidateLayout(for: textRange)
+                }
+            }
+        }
+
+        // Set up typing attributes updater
+        viewModel.operationManager?.typingAttributesUpdater = { [weak textView] in
+            guard let textView = textView else { return }
+            context.coordinator.updateIndentationOfTypingAttributes(in: textView)
+        }
+
         // Set up callback for model-to-view text updates (for LLM insertions)
         // TODO: do this directly through OperationManager
         viewModel.onTextUpdate = { [weak textView] range, text in
@@ -122,80 +144,6 @@ struct NSTextEditor: NSViewRepresentable {
             }
         }
         
-        // MARK: - Indent
-
-        // indent(range:) is called in NSTextViewDelegate.textView(_:doCommandBy:)
-        // for insertTab and insertBacktab, with selectedRange()
-        func indent(_ range: NSRange, depth: Int, in textView: NSTextView) {
-            if range.length == 0 {
-                let loc = range.location
-                self.indent([Indent(location: loc, depth: depth)], in: textView)
-                let str = (textView.string as NSString)
-                if (loc == 0 || str.character(at: loc - 1) == "\n".utf16.first!)
-                    && (loc == str.length || str.character(at: loc) == "\n".utf16.first!)
-                {
-                    // if current line is empty
-                    // use invisible char to force layout to adopt new typing attribute indentation
-                    textView.undoManager?.disableUndoRegistration()
-                    textView.insertText("\u{200B}", replacementRange: NSRange(location: loc, length: 0))
-                    textView.insertText("", replacementRange: NSRange(location: loc, length: 1))
-                    textView.undoManager?.enableUndoRegistration()
-                }
-            } else {
-                var indentations = [Indent]()
-                (textView.string as NSString).enumerateSubstrings(in: range, options: .byLines) {
-                    (_, range, enclosingRange, _) in
-                    indentations.append(Indent(location: range.location, depth: depth))
-                }
-                self.indent(indentations, in: textView)
-            }
-        }
-
-        func indent(
-            _ indents: [Indent],
-            in textView: NSTextView
-        ) {
-            guard !indents.isEmpty else { return }
-
-            var undoIndents = [Indent]()
-            for indent in indents {
-                if indent.depth == 0 { continue }
-
-                do {
-                    let currentDepth = try viewModel.indentation(at: indent.location)
-                    if currentDepth + indent.depth < 0 {
-                        try viewModel.indent(depth: -currentDepth, at: indent.location)
-                        undoIndents.append(Indent(location: indent.location, depth: currentDepth))
-                    } else {
-                        try viewModel.indent(depth: indent.depth, at: indent.location)
-                        undoIndents.append(Indent(location: indent.location, depth: -indent.depth))
-                    }
-                } catch {
-                    fatalError()
-                }
-                let nsString = textView.string as NSString
-                let pRange = nsString.paragraphRange(for: NSRange(location: indent.location, length: 0))
-                if let layoutManager = textView.textContainer?.textLayoutManager,
-                   let contentStorage = layoutManager.textContentManager as? NSTextContentStorage {
-                    contentStorage.performEditingTransaction {
-                        contentStorage.textStorage?.edited([.editedAttributes], range: pRange, changeInLength: 0)
-
-                        if let textContentManager = layoutManager.textContentManager,
-                           let textRange = NSTextRange(pRange, in: textContentManager) {
-                            layoutManager.invalidateLayout(for: textRange)
-                        } else {
-                            fatalError("textkit 2 😡")
-                        }
-                    }
-                }
-            }
-            self.updateIndentationOfTypingAttributes(in: textView)
-
-            textView.undoManager?.registerUndo(withTarget: self) { target in
-                target.indent(undoIndents, in: textView)
-            }
-        }
-
         // MARK: - Collapse/expand
 
         func collapse(_ range: NSRange, in textView: NSTextView) {
@@ -249,7 +197,7 @@ class MarshlandTextView: NSTextView {
             self.undoManager?.beginUndoGrouping()
             self.insertText(chunk.content as Any, replacementRange: insertRange)
             let tempIs = chunk.indents.map { Indent(location: $0.location + insertRange.location, depth: $0.depth) }
-            (self.delegate as? NSTextEditor.Coordinator)?.indent(tempIs, in: self)
+//            (self.delegate as? NSTextEditor.Coordinator)?.indent(tempIs, in: self)
             self.undoManager?.endUndoGrouping()
 
         } else {

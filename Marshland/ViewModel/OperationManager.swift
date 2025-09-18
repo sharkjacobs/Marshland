@@ -13,6 +13,8 @@ class OperationManager {
     var undoManager: UndoManager?
     private weak var viewModel: EditorViewModel?
     var textStorageUpdater: ((NSRange, String) -> Void)?
+    var layoutInvalidator: ((NSRange) -> Void)?
+    var typingAttributesUpdater: (() -> Void)?
 
     init(viewModel: EditorViewModel) {
         self.viewModel = viewModel
@@ -23,6 +25,40 @@ class OperationManager {
         case delete(range: NSRange)
         case indent(location: Int, depth: Int)
         case moveSelection(from: NSRange, to: NSRange)
+    }
+    
+    func indent(location: Int, depth: Int = 1) {
+        self.indent(NSRange(location: location, length: 0), depth: depth)
+    }
+    
+    func indent(_ range: NSRange, depth: Int = 1) {
+        guard let content = (viewModel?.string as? NSString) else { return }
+        if range.length == 0 {
+            let loc = range.location
+            let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: loc)) ?? 0))
+            if actualDepth != 0 {
+                undoManager?.beginUndoGrouping()
+                self.process(operation: .indent(location: loc, depth: actualDepth))
+                undoManager?.endUndoGrouping()
+            }
+        } else {
+            var isValidIndentOperation: Bool = false
+            content.enumerateSubstrings(in: range, options: .byLines) {
+                (_, range, enclosingRange, _) in
+                let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: range.location)) ?? 0))
+                if actualDepth != 0 {
+                    if !isValidIndentOperation {
+                        self.undoManager?.beginUndoGrouping()
+                        isValidIndentOperation = true
+                    }
+                    self.process(operation: .indent(location: range.location, depth: actualDepth))
+                }
+            }
+            if isValidIndentOperation {
+                undoManager?.endUndoGrouping()
+            }
+        }
+        typingAttributesUpdater?()
     }
 
     func replaceCharacters(in range: NSRange, with string: String) {
@@ -81,6 +117,11 @@ class OperationManager {
             }
             // Update document model
             try? viewModel?.indent(depth: depth, at: location)
+            // Invalidate layout for the paragraph containing this location
+            if let content = viewModel?.string as NSString? {
+                let pRange = content.paragraphRange(for: NSRange(location: location, length: 0))
+                layoutInvalidator?(pRange)
+            }
         case .moveSelection(from: let r1, to: let r2):
             undoManager?.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))
