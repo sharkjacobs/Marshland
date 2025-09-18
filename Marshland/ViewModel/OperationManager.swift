@@ -66,6 +66,7 @@ class OperationManager {
         let operations = self.operationsForReplaceCharacters(in: range, with: string as NSString)
         process(operations: operations)
         undoManager?.endUndoGrouping()
+        viewModel?.documentChanged()
     }
     
     private func operationsForReplaceCharacters(in range: NSRange, with string: NSString) -> [Operation] {

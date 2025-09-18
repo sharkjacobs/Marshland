@@ -44,7 +44,9 @@ struct NSTextEditor: NSViewRepresentable {
         bridge.coordinator = context.coordinator
 
         viewModel.operationManager?.textStorageUpdater = { [weak textView] range, text in
-            textView?.textStorage?.replaceCharacters(in: range, with: text)
+            Task { @MainActor in
+                textView?.textStorage?.replaceCharacters(in: range, with: text)
+            }
         }
 
         viewModel.operationManager?.layoutInvalidator = { [weak textView] range in
@@ -67,14 +69,6 @@ struct NSTextEditor: NSViewRepresentable {
             context.coordinator.updateIndentationOfTypingAttributes(in: textView)
         }
 
-        // Set up callback for model-to-view text updates (for LLM insertions)
-        // TODO: do this directly through OperationManager
-        viewModel.onTextUpdate = { [weak textView] range, text in
-            Task { @MainActor in
-                textView?.insertText(text, replacementRange: range)
-            }
-        }
-        
         textView.string = viewModel.string
         
         scrollView.postsFrameChangedNotifications = true

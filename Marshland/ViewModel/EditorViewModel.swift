@@ -20,7 +20,6 @@ class EditorViewModel {
     var messages = [Message]()
     var string: String { document.tree.string }
     
-    var onTextUpdate: ((NSRange, String) -> Void)?
     private var currentCursorPosition: Int = 0
 
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
@@ -31,6 +30,10 @@ class EditorViewModel {
         self.observeLLMService()
     }
 
+    func documentChanged() {
+        document.objectWillChange.send()
+    }
+    
     func observeLLMService() {
         withObservationTracking {
             _ = llmService.time
@@ -113,10 +116,8 @@ class EditorViewModel {
     /// - update cursor position for next insertion
     /// - notify document, saved content is dirty
     func insertText(_ text: String, at location: Int) {
-//        try? document.tree.insert(content: text, at: location)
-        onTextUpdate?(NSRange(location: location, length: 0), text)
+        operationManager?.replaceCharacters(in: NSRange(location: location, length: 0), with: text)
         currentCursorPosition = location + text.utf16.count
-        document.objectWillChange.send()
     }
     
     func copiedData(for range: NSRange) -> PasteboardChunk? {
