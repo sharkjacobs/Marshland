@@ -52,6 +52,14 @@ struct NSTextEditor: NSViewRepresentable {
         
         textView.string = viewModel.string
         
+        scrollView.postsFrameChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(NSTextEditor.Coordinator.scrollViewFrameDidChange(_:)),
+            name: NSView.frameDidChangeNotification,
+            object: scrollView
+        )
+        
         return scrollView
     }
 
@@ -94,6 +102,16 @@ struct NSTextEditor: NSViewRepresentable {
         init(viewModel: EditorViewModel) {
             self.viewModel = viewModel
             super.init()
+        }
+        
+        @objc func scrollViewFrameDidChange(_ notification: Notification) {
+            guard
+                let scrollView = notification.object as? NSScrollView,
+                let textView = scrollView.documentView as? MarshlandTextView
+            else { return }
+
+            // Recompute overscroll inset
+            textView.scrollViewDidResize(scrollView)
         }
 
         // MARK: - Indent
@@ -244,5 +262,21 @@ class MarshlandTextView: NSTextView {
                 || pb.canReadItem(withDataConformingToTypes: [NSPasteboard.PasteboardType.string.rawValue])
         }
         return super.validateMenuItem(menuItem)
+    }
+
+    // MARK: - Overscrolling
+    
+    func scrollViewDidResize(_ scrollView: NSScrollView) {
+        let offset = scrollView.bounds.height / 4 // half the window
+        textContainerInset = NSSize(width: 0, height: offset)
+        overscrollY = offset
+    }
+    
+    var overscrollY: CGFloat = 0
+
+    override var textContainerOrigin: NSPoint {
+        return super
+            .textContainerOrigin
+            .applying(.init(translationX: 0, y: -overscrollY))
     }
 }
