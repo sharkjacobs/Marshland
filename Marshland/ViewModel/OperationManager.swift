@@ -93,7 +93,7 @@ class OperationManager {
         switch operation {
         case .insert(text: let text, at: let index):
             undoManager?.registerUndo(withTarget: self) { target in
-                let deletionRange = NSRange(location: index, length: text.count)
+                let deletionRange = NSRange(location: index, length: text.utf16.count)
                 target.process(operation: .delete(range: deletionRange))
             }
             try? viewModel?.tendrilTreeInsert(content: text, at: index)
