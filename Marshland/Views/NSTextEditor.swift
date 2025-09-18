@@ -43,12 +43,10 @@ struct NSTextEditor: NSViewRepresentable {
         bridge.textView = textView
         bridge.coordinator = context.coordinator
 
-        // Set up OperationManager's text storage updater
         viewModel.operationManager?.textStorageUpdater = { [weak textView] range, text in
             textView?.textStorage?.replaceCharacters(in: range, with: text)
         }
 
-        // Set up OperationManager's layout invalidator for indentation
         viewModel.operationManager?.layoutInvalidator = { [weak textView] range in
             guard let textView = textView,
                   let layoutManager = textView.textContainer?.textLayoutManager,
@@ -64,7 +62,6 @@ struct NSTextEditor: NSViewRepresentable {
             }
         }
 
-        // Set up typing attributes updater
         viewModel.operationManager?.typingAttributesUpdater = { [weak textView] in
             guard let textView = textView else { return }
             context.coordinator.updateIndentationOfTypingAttributes(in: textView)
