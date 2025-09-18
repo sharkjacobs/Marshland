@@ -100,10 +100,6 @@ struct NSTextEditor: NSViewRepresentable {
             }
             textView.typingAttributes[.paragraphStyle] = typingAttributesParagraphStyle
         }
-
-        func textDidChange(_ notification: Notification) {
-            viewModel.textDidChange()
-        }
         
         init(viewModel: EditorViewModel) {
             self.viewModel = viewModel

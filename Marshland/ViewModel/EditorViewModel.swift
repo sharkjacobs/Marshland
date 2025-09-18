@@ -108,16 +108,6 @@ class EditorViewModel {
         try document.tree.insert(content: content, at: location)
     }
     
-    func textDidChange() {
-        document.objectWillChange.send()
-    }
-
-    func textDidChange(in range: NSRange, replacement: String) {
-        try? document.tree.delete(range: range)
-        try? document.tree.insert(content: replacement, at: range.location)
-        document.objectWillChange.send()
-    }
-    
     /// - Update model
     /// - Notify UI to update
     /// - update cursor position for next insertion
