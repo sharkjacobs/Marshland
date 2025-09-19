@@ -65,6 +65,15 @@ struct NSTextEditor: NSViewRepresentable {
         }
 
         viewModel.operationManager?.typingAttributesUpdater = { [weak textView] in
+            // This is (only) needed when the cursor is at the beginning of a newline
+            // and at the very end of content
+            // e.g. "blah blah blah\n<cursor>"
+            // A line's content is its characters up to and including a terminal newline
+            // the cursor is on an empty line "" with no content, no characters
+            // and so NSTextContentStorageDelegate method textContentStorage(_:textParagraphWith:) will never be called on it
+            // so without being attached to a paragraph with paragraphStyle attribute
+            // we fall back on typingAttributes
+            // which must be set correctly
             guard let textView = textView else { return }
             context.coordinator.updateIndentationOfTypingAttributes(in: textView)
         }
@@ -133,6 +142,9 @@ struct NSTextEditor: NSViewRepresentable {
             if let undoManager = textView.window?.undoManager {
                 viewModel.operationManager?.undoManager = undoManager
             }
+            // We just need to do this sometime after init
+            // to correctly set typing attributes of a brand new empty textview
+            updateIndentationOfTypingAttributes(in: textView)
         }
         
         // MARK: - Collapse/expand

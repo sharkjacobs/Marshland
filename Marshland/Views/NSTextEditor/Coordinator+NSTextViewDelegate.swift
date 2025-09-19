@@ -11,7 +11,6 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textViewDidChangeSelection(_ notification: Notification) {
         guard let textView = notification.object as? NSTextView else { return }
 
-        updateIndentationOfTypingAttributes(in: textView)
         viewModel.updateCursorPosition(textView.selectedRange().location)
         
         DispatchQueue.main.async {
