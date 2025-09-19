@@ -136,6 +136,8 @@ class EditorViewModel {
     func insertText(_ text: String, at range: NSRange) {
         operationManager?.replaceCharacters(in: range, with: text)
         selection = NSRange(location: range.location + text.utf16.count, length: 0)
+        // TODO: In future, replaceCharacters should generate appropriate moveSelection Operation
+        // for consistency and proper undo coalescing behavior
     }
     
     func copiedData(for range: NSRange) -> PasteboardChunk? {

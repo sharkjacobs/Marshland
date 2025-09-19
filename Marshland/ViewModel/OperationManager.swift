@@ -145,9 +145,7 @@ class OperationManager {
             undoManager?.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))
             }
-            // TODO: move textView selection point
-            // it actually seems like the cursor automatically moves in sensible ways
-            // e.g. if you delete or insert text to textStorage before it's location
+            viewModel?.setSelection(r2)
             onChange?(.selectionMoved(from: r1, to: r2))
         }
         

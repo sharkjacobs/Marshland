@@ -100,14 +100,17 @@ Checkpoints:
 Goal: Make selection a VM concern and complete the `.moveSelection` operation.
 
 Steps:
-1. [ ] Ensure `EditorViewModel` exposes a method to set selection:
+1. [x] Ensure `EditorViewModel` exposes a method to set selection:
    - `func setSelection(_ range: NSRange)` (or equivalent), and to retrieve it if needed.
-2. [ ] In OM’s `.moveSelection` handler, call `viewModel.setSelection(r2)` and register undo to restore `r1`.
-3. [ ] Emit `onChange(.selectionMoved(from: r1, to: r2))`.
-4. [ ] Build and run.
+2. [x] In OM's `.moveSelection` handler, call `viewModel.setSelection(r2)` and register undo to restore `r1`.
+3. [x] Emit `onChange(.selectionMoved(from: r1, to: r2))`.
+4. [x] Added TODO comment in `insertText()` about future moveSelection Operation integration for consistency and proper undo coalescing.
+5. [x] Build and run.
 
 Checkpoints:
-- Selection changes propagate via VM and typed change.
+- [x] Selection changes propagate via VM and typed change.
+- [x] Infrastructure in place for future operations requiring explicit selection control.
+- [x] VM selection state synchronized for future undo coalescing logic.
 
 ---
 
