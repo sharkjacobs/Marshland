@@ -11,7 +11,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textViewDidChangeSelection(_ notification: Notification) {
         guard let textView = notification.object as? NSTextView else { return }
 
-        viewModel.updateCursorPosition(textView.selectedRange().location)
+        viewModel.setSelection(textView.selectedRange())
         
         DispatchQueue.main.async {
             // TODO: don't scroll when llm inserts text

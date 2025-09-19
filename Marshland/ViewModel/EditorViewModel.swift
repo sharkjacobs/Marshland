@@ -19,8 +19,8 @@ class EditorViewModel {
     var isLLMResponding: Bool = false
     var messages = [Message]()
     var string: String { document.tree.string }
-    
-    private var currentCursorPosition: Int = 0
+
+    var selection: NSRange = NSRange(location: 0, length: 0)
 
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
         self.document = document
@@ -33,7 +33,11 @@ class EditorViewModel {
     func documentChanged() {
         document.objectWillChange.send()
     }
-    
+
+    func setSelection(_ range: NSRange) {
+        selection = range
+    }
+
     func observeLLMService() {
         withObservationTracking {
             _ = llmService.time
@@ -76,7 +80,7 @@ class EditorViewModel {
                 // let full = NSRange(location: 0, length: response.length)
                 // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
                 // response.addAttribute(.author,     value: authorName,            range: full)
-                self.insertText($0, at: self.currentCursorPosition)
+                self.insertText($0, at: self.selection)
             }
             reloadMessages()
         }
@@ -86,10 +90,6 @@ class EditorViewModel {
         messages = self.document.tree.messages()
     }
 
-    func updateCursorPosition(_ position: Int) {
-        currentCursorPosition = position
-    }
-    
     func indentation(at offset: Int) throws -> Int {
         return try document.tree.indentation(at: offset)
     }
@@ -103,21 +103,39 @@ class EditorViewModel {
 //        updateIndentationAttributes(for: NSRange(location: location, length: 0))
     }
     
-    func tendrilTreeDelete(range: NSRange) throws {
+    internal func tendrilTreeDelete(range: NSRange) throws {
         try document.tree.delete(range: range)
     }
-    
-    func tendrilTreeInsert(content: String, at location: Int) throws {
+
+    internal func tendrilTreeInsert(content: String, at location: Int) throws {
         try document.tree.insert(content: content, at: location)
     }
-    
+
+    // MARK: - Domain-oriented edit methods
+
+    func insert(text: String, at location: Int) throws {
+        try tendrilTreeInsert(content: text, at: location)
+    }
+
+    func delete(range: NSRange) throws {
+        try tendrilTreeDelete(range: range)
+    }
+
+    func indent(range: NSRange, depth: Int) throws {
+        if depth > 0 {
+            try document.tree.indent(depth: depth, range: range)
+        } else {
+            try document.tree.outdent(depth: depth, range: range)
+        }
+    }
+
     /// - Update model
     /// - Notify UI to update
     /// - update cursor position for next insertion
     /// - notify document, saved content is dirty
-    func insertText(_ text: String, at location: Int) {
-        operationManager?.replaceCharacters(in: NSRange(location: location, length: 0), with: text)
-        currentCursorPosition = location + text.utf16.count
+    func insertText(_ text: String, at range: NSRange) {
+        operationManager?.replaceCharacters(in: range, with: text)
+        selection = NSRange(location: range.location + text.utf16.count, length: 0)
     }
     
     func copiedData(for range: NSRange) -> PasteboardChunk? {

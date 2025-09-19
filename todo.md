@@ -80,14 +80,14 @@ Checkpoints:
 Goal: Rename and centralize edit operations in VM so OM doesn’t know about internal storage (e.g., `tendrilTreeInsert`).
 
 Steps:
-1. [ ] In `EditorViewModel`, add new domain-oriented methods:
-   - `func insert(text: String, at index: Int) throws`
+1. [x] In `EditorViewModel`, add new domain-oriented methods:
+   - `func insert(text: String, at location: Int) throws`
    - `func delete(range: NSRange) throws`
-   - `func indent(depth: Int, at location: Int) throws`
-   - (If needed) `func indent(range: NSRange, depth: Int) throws`
-2. [ ] Implement these by delegating to the current internal model methods (`tendrilTreeInsert`, `tendrilTreeDelete`, etc.). Keep old methods internal/private if possible.
-3. [ ] In `OperationManager`, replace calls to `tendrilTreeInsert`/`tendrilTreeDelete`/`indent` with the new VM methods.
-4. [ ] Build and run.
+   - `func indent(range: NSRange, depth: Int) throws`
+   - Also added selection properties: `selection: NSRange` and `setSelection(_ range: NSRange)`
+2. [x] Implement these by delegating to the current internal model methods (`tendrilTreeInsert`, `tendrilTreeDelete`, etc.). Keep old methods internal/private if possible.
+3. [x] In `OperationManager`, replace calls to `tendrilTreeInsert`/`tendrilTreeDelete`/`indent` with the new VM methods.
+4. [x] Build and run.
 
 Checkpoints:
 - No functional changes.

@@ -120,7 +120,7 @@ class OperationManager {
                 let deletionRange = NSRange(location: index, length: text.utf16.count)
                 target.process(operation: .delete(range: deletionRange))
             }
-            try? viewModel?.tendrilTreeInsert(content: text, at: index)
+            try? viewModel?.insert(text: text, at: index)
             textStorageUpdater?(NSRange(location: index, length: 0), text)
             onChange?(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
@@ -128,7 +128,7 @@ class OperationManager {
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .insert(text: deletedText, at: range.location))
             }
-            try? viewModel?.tendrilTreeDelete(range: range)
+            try? viewModel?.delete(range: range)
             textStorageUpdater?(range, "")
             onChange?(.textReplaced(range: range, replacement: ""))
         case .indent(location: let location, depth: let depth):
