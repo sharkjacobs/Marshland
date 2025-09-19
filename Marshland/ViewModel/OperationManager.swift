@@ -44,7 +44,7 @@ class OperationManager {
         } else {
             var isValidIndentOperation: Bool = false
             content.enumerateSubstrings(in: range, options: .byLines) {
-                (_, range, enclosingRange, _) in
+                (_, range, _, _) in
                 let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: range.location)) ?? 0))
                 if actualDepth != 0 {
                     if !isValidIndentOperation {
@@ -71,6 +71,8 @@ class OperationManager {
     
     private func operationsForReplaceCharacters(in range: NSRange, with string: NSString) -> [Operation] {
         var operations: [Operation] = []
+        
+        operations += normalizeIndentationOperations(for: range)
 
         if range.length > 0 {
             operations.append(.delete(range: range))
@@ -80,6 +82,26 @@ class OperationManager {
             operations.append(.insert(text: string as String, at: range.location))
         }
 
+        return operations
+    }
+    
+    private func normalizeIndentationOperations(for range: NSRange) -> [Operation] {
+        var operations: [Operation] = []
+        guard let content = (viewModel?.string as? NSString),
+              let baseIndentation = try? viewModel?.indentation(at: range.location)
+        else {
+            return operations
+        }
+
+        content.enumerateSubstrings(in: range, options: .byLines) {
+            (_, range, _, _) in
+            if let indentation = try? self.viewModel?.indentation(at: range.location) {
+                let delta = baseIndentation - indentation
+                if delta != 0 {
+                    operations.append(.indent(location: range.location, depth: delta))
+                }
+            }
+        }
         return operations
     }
     
@@ -119,6 +141,8 @@ class OperationManager {
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))
             }
             // TODO: move textView selection point
+            // it actually seems like the cursor automatically moves in sensible ways
+            // e.g. if you delete or insert text to textStorage before it's location
         }
         
     }

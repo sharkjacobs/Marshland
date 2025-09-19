@@ -50,16 +50,18 @@ struct NSTextEditor: NSViewRepresentable {
         }
 
         viewModel.operationManager?.layoutInvalidator = { [weak textView] range in
-            guard let textView = textView,
-                  let layoutManager = textView.textContainer?.textLayoutManager,
-                  let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
-
-            contentStorage.performEditingTransaction {
-                contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
-
-                if let textContentManager = layoutManager.textContentManager,
-                   let textRange = NSTextRange(range, in: textContentManager) {
-                    layoutManager.invalidateLayout(for: textRange)
+            Task { @MainActor in
+                guard let textView = textView,
+                      let layoutManager = textView.textContainer?.textLayoutManager,
+                      let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
+                
+                contentStorage.performEditingTransaction {
+                    contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
+                    
+                    if let textContentManager = layoutManager.textContentManager,
+                       let textRange = NSTextRange(range, in: textContentManager) {
+                        layoutManager.invalidateLayout(for: textRange)
+                    }
                 }
             }
         }
@@ -74,8 +76,10 @@ struct NSTextEditor: NSViewRepresentable {
             // so without being attached to a paragraph with paragraphStyle attribute
             // we fall back on typingAttributes
             // which must be set correctly
-            guard let textView = textView else { return }
-            context.coordinator.updateIndentationOfTypingAttributes(in: textView)
+            Task { @MainActor in
+                guard let textView = textView else { return }
+                context.coordinator.updateIndentationOfTypingAttributes(in: textView)
+            }
         }
 
         textView.string = viewModel.string
