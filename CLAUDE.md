@@ -1,5 +1,39 @@
 # Claude Code Guidelines for Marshland
 
+## Documentation Style
+
+**Prefer comprehensive doc comments over inline comments** for method documentation:
+
+- ✅ Use: Triple-slash doc comments (`///`) with parameter and return descriptions
+- ❌ Avoid: Inline comments explaining what methods do or what they return
+
+### Why:
+- Doc comments are discoverable in Xcode's Quick Help and autocomplete
+- They provide structured parameter and return value documentation
+- They encourage thinking about the method's public API contract
+- They're more maintainable than scattered inline comments
+
+### Example:
+```swift
+// ✅ Good - comprehensive doc comment
+/// Indents or outdents text at the specified location
+/// - Parameters:
+///   - depth: Number of indent levels to add (positive) or remove (negative)
+///   - location: UTF-16 byte offset in the document where indentation should be applied
+/// - Returns: The paragraph range that needs layout invalidation after the indentation change
+func indent(depth: Int, at location: Int) throws -> NSRange {
+    // Implementation...
+    return paragraphRange
+}
+
+// ❌ Avoid - inline comment explaining return value
+func indent(depth: Int, at location: Int) throws -> NSRange {
+    // Implementation...
+    // Return the paragraph range that needs layout invalidation
+    return paragraphRange
+}
+```
+
 ## String Length Consistency
 
 **ALWAYS use UTF-16 code units for string length measurements** to ensure compatibility with NSString/NSTextView:

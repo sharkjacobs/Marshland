@@ -33,7 +33,7 @@ class OperationManager {
     }
     
     func indent(_ range: NSRange, depth: Int = 1) {
-        guard let content = (viewModel?.string as? NSString) else { return }
+        guard let content = viewModel?.content else { return }
         if range.length == 0 {
             let loc = range.location
             let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: loc)) ?? 0))
@@ -89,7 +89,7 @@ class OperationManager {
     
     private func normalizeIndentationOperations(for range: NSRange) -> [Operation] {
         var operations: [Operation] = []
-        guard let content = (viewModel?.string as? NSString),
+        guard let content = viewModel?.content,
               let baseIndentation = try? viewModel?.indentation(at: range.location)
         else {
             return operations
@@ -124,7 +124,7 @@ class OperationManager {
             textStorageUpdater?(NSRange(location: index, length: 0), text)
             onChange?(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
-            let deletedText = (viewModel?.string as NSString?)?.substring(with: range) ?? ""
+            let deletedText = viewModel?.content.substring(with: range) ?? ""
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .insert(text: deletedText, at: range.location))
             }
@@ -135,9 +135,7 @@ class OperationManager {
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .indent(location: location, depth: -depth))
             }
-            try? viewModel?.indent(depth: depth, at: location)
-            if let content = viewModel?.string as NSString? {
-                let pRange = content.paragraphRange(for: NSRange(location: location, length: 0))
+            if let pRange = try? viewModel?.indent(depth: depth, at: location) {
                 layoutInvalidator?(pRange)
                 onChange?(.paragraphsInvalidated(pRange))
             }

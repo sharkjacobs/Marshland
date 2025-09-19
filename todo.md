@@ -119,15 +119,23 @@ Checkpoints:
 Goal: OM should not compute AppKit-specific invalidation details when avoidable.
 
 Steps:
-1. [ ] Move paragraph-range computation responsibility to VM (or a small coordinator):
-   - Provide a VM method that, given a location or range, returns the paragraph range(s), or better: emits `EditorChange.paragraphsInvalidated` based on the concrete operation.
-2. [ ] In OM `.indent` processing, stop computing paragraph range directly. Instead:
-   - After calling VM’s `indent`, rely on VM to decide which paragraphs are invalidated and to propagate via `onChange` (or a VM-level change stream in later stages).
-3. [ ] Temporarily keep the old `layoutInvalidator` calls in OM to avoid behavior changes, but prefer emitting `onChange` as the source of truth.
-4. [ ] Build and run.
+1. [x] Move paragraph-range computation responsibility to VM:
+   - Modified `EditorViewModel.indent(depth:at:)` to return the paragraph range that needs layout invalidation.
+2. [x] In OM `.indent` processing, stop computing paragraph range directly:
+   - OM now calls `viewModel?.indent()` and uses the returned paragraph range for `onChange(.paragraphsInvalidated())`.
+3. [x] Change VM string property to `content: NSString` to eliminate redundant casting in OM.
+4. [x] Update all NSString casts in OperationManager to use new `content` property directly.
+5. [x] Update NSTextEditor.swift to cast `viewModel.content as String` for compatibility.
+6. [x] Keep `layoutInvalidator` call temporarily since `onChange` handler not yet wired to UI.
+7. [x] Add comprehensive doc comment to `indent` method following new documentation guidelines.
+8. [x] Add documentation style guidelines to CLAUDE.md.
+9. [x] Build and run.
 
 Checkpoints:
-- Behavior unchanged; OM is thinner.
+- [x] Behavior unchanged; OM is thinner.
+- [x] VM encapsulates paragraph range computation logic.
+- [x] Eliminated redundant NSString casting throughout OM.
+- [x] Single source of truth for layout invalidation via `onChange` (once UI wiring complete).
 
 ---
 

@@ -82,7 +82,7 @@ struct NSTextEditor: NSViewRepresentable {
             }
         }
 
-        textView.string = viewModel.string
+        textView.string = viewModel.content as String
         
         scrollView.postsFrameChangedNotifications = true
         NotificationCenter.default.addObserver(

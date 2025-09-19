@@ -18,7 +18,7 @@ class EditorViewModel {
     var llmStatusMessage: String?
     var isLLMResponding: Bool = false
     var messages = [Message]()
-    var string: String { document.tree.string }
+    var content: NSString { document.tree.string as NSString }
 
     var selection: NSRange = NSRange(location: 0, length: 0)
 
@@ -94,13 +94,19 @@ class EditorViewModel {
         return try document.tree.indentation(at: offset)
     }
     
-    func indent(depth: Int, at location: Int) throws {
+    /// Indents or outdents text at the specified location
+    /// - Parameters:
+    ///   - depth: Number of indent levels to add (positive) or remove (negative)
+    ///   - location: UTF-16 byte offset in the document where indentation should be applied
+    /// - Returns: The paragraph range that needs layout invalidation after the indentation change
+    func indent(depth: Int, at location: Int) throws -> NSRange {
         if depth > 0 {
             try document.tree.indent(depth: depth, range: NSRange(location: location, length: 0))
         } else {
             try document.tree.outdent(depth: depth, range: NSRange(location: location, length: 0))
         }
-//        updateIndentationAttributes(for: NSRange(location: location, length: 0))
+
+        return content.paragraphRange(for: NSRange(location: location, length: 0))
     }
     
     internal func tendrilTreeDelete(range: NSRange) throws {
@@ -153,7 +159,7 @@ class EditorViewModel {
             ))
         }
         
-        return PasteboardChunk(content: (document.tree.string as NSString).substring(with: range), indents: indents)
+        return PasteboardChunk(content: content.substring(with: range), indents: indents)
     }
 }
 
