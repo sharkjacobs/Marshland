@@ -42,13 +42,13 @@ Checkpoints:
 Goal: Add a single, typed way to represent editor changes without removing existing closures yet.
 
 Steps:
-1. [ ] Create a new file `EditorChange.swift` with:
+1. [x] Create a new file `EditorChange.swift` with:
    - An enum `EditorChange` with cases:
      - `textReplaced(range: NSRange, replacement: String)`
      - `paragraphsInvalidated(NSRange)`
      - `typingAttributesNeedsUpdate`
      - `selectionMoved(from: NSRange, to: NSRange)`
-2. [ ] Build to verify no breakages (nothing references it yet).
+2. [x] Build to verify no breakages (nothing references it yet).
 
 Checkpoints:
 - App still builds.
