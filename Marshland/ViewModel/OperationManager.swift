@@ -15,6 +15,7 @@ class OperationManager {
     var textStorageUpdater: ((NSRange, String) -> Void)?
     var layoutInvalidator: ((NSRange) -> Void)?
     var typingAttributesUpdater: (() -> Void)?
+    var onChange: ((EditorChange) -> Void)?
 
     init(viewModel: EditorViewModel) {
         self.viewModel = viewModel
@@ -59,6 +60,7 @@ class OperationManager {
             }
         }
         typingAttributesUpdater?()
+        onChange?(.typingAttributesNeedsUpdate)
     }
 
     func replaceCharacters(in range: NSRange, with string: String) {
@@ -120,6 +122,7 @@ class OperationManager {
             }
             try? viewModel?.tendrilTreeInsert(content: text, at: index)
             textStorageUpdater?(NSRange(location: index, length: 0), text)
+            onChange?(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
             let deletedText = (viewModel?.string as NSString?)?.substring(with: range) ?? ""
             undoManager?.registerUndo(withTarget: self) { target in
@@ -127,6 +130,7 @@ class OperationManager {
             }
             try? viewModel?.tendrilTreeDelete(range: range)
             textStorageUpdater?(range, "")
+            onChange?(.textReplaced(range: range, replacement: ""))
         case .indent(location: let location, depth: let depth):
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .indent(location: location, depth: -depth))
@@ -135,6 +139,7 @@ class OperationManager {
             if let content = viewModel?.string as NSString? {
                 let pRange = content.paragraphRange(for: NSRange(location: location, length: 0))
                 layoutInvalidator?(pRange)
+                onChange?(.paragraphsInvalidated(pRange))
             }
         case .moveSelection(from: let r1, to: let r2):
             undoManager?.registerUndo(withTarget: self) { weakSelf in
@@ -143,6 +148,7 @@ class OperationManager {
             // TODO: move textView selection point
             // it actually seems like the cursor automatically moves in sensible ways
             // e.g. if you delete or insert text to textStorage before it's location
+            onChange?(.selectionMoved(from: r1, to: r2))
         }
         
     }

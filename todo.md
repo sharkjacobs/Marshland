@@ -60,14 +60,14 @@ Checkpoints:
 Goal: Introduce a single callback to carry typed changes while keeping existing closures.
 
 Steps:
-1. [ ] In `OperationManager`, add:
+1. [x] In `OperationManager`, add:
    - `var onChange: ((EditorChange) -&gt; Void)?`
    - Do not remove `textStorageUpdater`, `layoutInvalidator`, or `typingAttributesUpdater` yet.
-2. [ ] Where OM currently calls the individual closures, also emit the corresponding `onChange` event:
+2. [x] Where OM currently calls the individual closures, also emit the corresponding `onChange` event:
    - After insert/delete: emit `.textReplaced(range:..., replacement: ...)` with the same values used for `textStorageUpdater`.
    - After indent: emit `.paragraphsInvalidated(...)` with the paragraph range.
    - After operations that adjust typing attributes: emit `.typingAttributesNeedsUpdate`.
-3. [ ] Build and run to verify behavior remains unchanged.
+3. [x] Build and run to verify behavior remains unchanged.
 
 Checkpoints:
 - Existing UI still updates via old closures.
