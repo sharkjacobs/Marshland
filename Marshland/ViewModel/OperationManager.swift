@@ -12,9 +12,6 @@ import AppKit
 class OperationManager {
     var undoManager: UndoManager?
     private weak var viewModel: EditorViewModel?
-    var textStorageUpdater: ((NSRange, String) -> Void)?
-    var layoutInvalidator: ((NSRange) -> Void)?
-    var typingAttributesUpdater: (() -> Void)?
     var onChange: ((EditorChange) -> Void)?
 
     init(viewModel: EditorViewModel) {
@@ -59,7 +56,6 @@ class OperationManager {
                 undoManager?.endUndoGrouping()
             }
         }
-        typingAttributesUpdater?()
         onChange?(.typingAttributesNeedsUpdate)
     }
 
@@ -121,7 +117,6 @@ class OperationManager {
                 target.process(operation: .delete(range: deletionRange))
             }
             try? viewModel?.insert(text: text, at: index)
-            textStorageUpdater?(NSRange(location: index, length: 0), text)
             onChange?(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
             let deletedText = viewModel?.content.substring(with: range) ?? ""
@@ -129,14 +124,12 @@ class OperationManager {
                 target.process(operation: .insert(text: deletedText, at: range.location))
             }
             try? viewModel?.delete(range: range)
-            textStorageUpdater?(range, "")
             onChange?(.textReplaced(range: range, replacement: ""))
         case .indent(location: let location, depth: let depth):
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .indent(location: location, depth: -depth))
             }
             if let pRange = try? viewModel?.indent(depth: depth, at: location) {
-                layoutInvalidator?(pRange)
                 onChange?(.paragraphsInvalidated(pRange))
             }
         case .moveSelection(from: let r1, to: let r2):

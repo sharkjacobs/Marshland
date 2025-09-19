@@ -139,36 +139,31 @@ Checkpoints:
 
 ---
 
-## Stage 6 – Consumers migrate to the typed callback
+## Stage 6 & 7 – Migrate to typed callback and remove legacy closures
 
-Goal: Switch the UI layer (view/controller) to consume `onChange` instead of the trio of closures.
-
-Steps:
-1. [ ] In the UI wiring code, subscribe to `OperationManager.onChange` and handle cases:
-   - For `.textReplaced`, update text storage.
-   - For `.paragraphsInvalidated`, invalidate layout.
-   - For `.typingAttributesNeedsUpdate`, refresh typing attributes.
-   - For `.selectionMoved`, update selection.
-2. [ ] Keep the old closures wired temporarily to ensure parity.
-3. [ ] Build and run; verify no double-updating or regressions.
-
-Checkpoints:
-- UI responds to `onChange`.
-
----
-
-## Stage 7 – Remove legacy closures
-
-Goal: Remove `textStorageUpdater`, `layoutInvalidator`, `typingAttributesUpdater` after migration.
+Goal: Switch the UI layer to consume `onChange` and remove the trio of closures.
 
 Steps:
-1. [ ] Remove the three closures from `OperationManager`.
-2. [ ] Remove all call sites for the old closures.
-3. [ ] Ensure all updates flow via `onChange`.
-4. [ ] Build and run.
+1. [x] Extract complex UI logic into reusable coordinator methods:
+   - `invalidateLayout(for:in:)` - TextKit 2 editing transactions and layout invalidation
+   - `updateTextStorage(range:replacement:in:)` - Text storage updates
+2. [x] Add unified `onChange` handler in NSTextEditor wiring code to handle all cases:
+   - `.textReplaced` → update text storage
+   - `.paragraphsInvalidated` → invalidate layout
+   - `.typingAttributesNeedsUpdate` → refresh typing attributes
+   - `.selectionMoved` → update selection
+3. [x] Remove the three closures from `OperationManager`:
+   - `textStorageUpdater`, `layoutInvalidator`, `typingAttributesUpdater`
+4. [x] Remove closure wiring code in NSTextEditor.swift
+5. [x] Remove all closure call sites from OperationManager operations
+6. [x] Ensure all updates flow exclusively via `onChange`
+7. [x] Build and run
 
 Checkpoints:
-- Codebase compiles; behavior preserved.
+- [x] UI responds to `onChange` with proper TextKit 2 integration
+- [x] Single source of truth for all UI updates
+- [x] No duplicate updates or closure complexity
+- [x] Behavior preserved with cleaner architecture
 
 ---
 

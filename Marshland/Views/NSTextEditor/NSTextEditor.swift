@@ -43,42 +43,21 @@ struct NSTextEditor: NSViewRepresentable {
         bridge.textView = textView
         bridge.coordinator = context.coordinator
 
-        viewModel.operationManager?.textStorageUpdater = { [weak textView] range, text in
-            Task { @MainActor in
-                textView?.textStorage?.replaceCharacters(in: range, with: text)
-            }
-        }
+        // Unified onChange handler
+        viewModel.operationManager?.onChange = { [weak textView] change in
+            guard let textView = textView else { return }
 
-        viewModel.operationManager?.layoutInvalidator = { [weak textView] range in
-            Task { @MainActor in
-                guard let textView = textView,
-                      let layoutManager = textView.textContainer?.textLayoutManager,
-                      let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
-                
-                contentStorage.performEditingTransaction {
-                    contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
-                    
-                    if let textContentManager = layoutManager.textContentManager,
-                       let textRange = NSTextRange(range, in: textContentManager) {
-                        layoutManager.invalidateLayout(for: textRange)
-                    }
-                }
-            }
-        }
-
-        viewModel.operationManager?.typingAttributesUpdater = { [weak textView] in
-            // This is (only) needed when the cursor is at the beginning of a newline
-            // and at the very end of content
-            // e.g. "blah blah blah\n<cursor>"
-            // A line's content is its characters up to and including a terminal newline
-            // the cursor is on an empty line "" with no content, no characters
-            // and so NSTextContentStorageDelegate method textContentStorage(_:textParagraphWith:) will never be called on it
-            // so without being attached to a paragraph with paragraphStyle attribute
-            // we fall back on typingAttributes
-            // which must be set correctly
-            Task { @MainActor in
-                guard let textView = textView else { return }
+            switch change {
+            case .textReplaced(let range, let replacement):
+                context.coordinator.updateTextStorage(range: range, replacement: replacement, in: textView)
+            case .paragraphsInvalidated(let range):
+                context.coordinator.invalidateLayout(for: range, in: textView)
+            case .typingAttributesNeedsUpdate:
                 context.coordinator.updateIndentationOfTypingAttributes(in: textView)
+            case .selectionMoved(_, let to):
+                Task { @MainActor in
+                    textView.setSelectedRange(to)
+                }
             }
         }
 
@@ -105,6 +84,30 @@ struct NSTextEditor: NSViewRepresentable {
         var viewModel: EditorViewModel
         private var indentationDepth: Int?
         private var typingAttributesParagraphStyle: NSParagraphStyle?
+
+        /// Invalidates layout for the specified range using TextKit 2 editing transactions
+        func invalidateLayout(for range: NSRange, in textView: NSTextView) {
+            Task { @MainActor in
+                guard let layoutManager = textView.textContainer?.textLayoutManager,
+                      let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
+
+                contentStorage.performEditingTransaction {
+                    contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
+
+                    if let textContentManager = layoutManager.textContentManager,
+                       let textRange = NSTextRange(range, in: textContentManager) {
+                        layoutManager.invalidateLayout(for: textRange)
+                    }
+                }
+            }
+        }
+
+        /// Updates text storage with the given replacement text
+        func updateTextStorage(range: NSRange, replacement: String, in textView: NSTextView) {
+            Task { @MainActor in
+                textView.textStorage?.replaceCharacters(in: range, with: replacement)
+            }
+        }
 
         func updateIndentationOfTypingAttributes(in textView: NSTextView) {
             func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
