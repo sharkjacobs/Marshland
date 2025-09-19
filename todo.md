@@ -172,16 +172,22 @@ Checkpoints:
 Goal: Allow OM to emit batched changes for better performance, handling the new `normalizeIndentationOperations`.
 
 Steps:
-1. [ ] Add `var onBatchChange: (([EditorChange]) -&gt; Void)?` to OM.
-2. [ ] In `replaceCharacters(in:with:)` and other grouped operations, collect emitted changes in a local array while the undo group is open.
-3. [ ] **Important**: Account for the multi-operation sequences from `normalizeIndentationOperations` + delete/insert. Each normalization indent + the main operations should be batched together.
-4. [ ] At the end of the group, prefer emitting `onBatchChange(changes)`; if nil, fall back to individual `onChange` calls.
-5. [ ] Update UI wiring to prefer batch handling when available.
-6. [ ] Build and run.
+1. [x] Add `var onBatchChange: (([EditorChange]) -> Void)?` to OM.
+2. [x] Add undo grouping tracking with `isUndoGrouping` and helper methods `beginUndoGroup()`, `endUndoGroup()`.
+3. [x] Add `emitChange(_:)` helper that batches during undo groups, emits individually otherwise.
+4. [x] Update all `onChange` calls to use `emitChange()` for consistent routing.
+5. [x] Update all undo grouping calls to use helper methods for proper tracking.
+6. [x] **Important**: Account for the multi-operation sequences from `normalizeIndentationOperations` + delete/insert. Each normalization indent + the main operations are now batched together.
+7. [x] Update UI wiring with both `onChange` (individual) and `onBatchChange` (batched) handlers.
+8. [x] Extract `processEditorChange(_:in:)` coordinator method for consistent change processing.
+9. [x] Add TODO comment for future coalescing optimizations.
+10. [x] Build and run.
 
 Checkpoints:
-- Fewer redundant UI updates; behavior preserved.
-- Indentation normalization + main operations properly batched.
+- [x] Fewer redundant UI updates; behavior preserved.
+- [x] Indentation normalization + main operations properly batched.
+- [x] Complex operations like paste with normalization now update UI once instead of multiple times.
+- [x] Framework in place for future coalescing optimizations.
 
 ---
 

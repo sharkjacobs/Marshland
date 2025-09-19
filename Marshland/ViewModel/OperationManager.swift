@@ -13,9 +13,36 @@ class OperationManager {
     var undoManager: UndoManager?
     private weak var viewModel: EditorViewModel?
     var onChange: ((EditorChange) -> Void)?
+    var onBatchChange: (([EditorChange]) -> Void)?
+
+    private var isUndoGrouping: Bool = false
+    private var batchedChanges: [EditorChange] = []
 
     init(viewModel: EditorViewModel) {
         self.viewModel = viewModel
+    }
+
+    private func beginUndoGroup() {
+        isUndoGrouping = true
+        batchedChanges = []
+        undoManager?.beginUndoGrouping()
+    }
+
+    private func endUndoGroup() {
+        if !batchedChanges.isEmpty {
+            onBatchChange?(batchedChanges)
+        }
+        batchedChanges = []
+        isUndoGrouping = false
+        undoManager?.endUndoGrouping()
+    }
+
+    private func emitChange(_ change: EditorChange) {
+        if isUndoGrouping {
+            batchedChanges.append(change)
+        } else {
+            onChange?(change)
+        }
     }
 
     private enum Operation {
@@ -35,9 +62,9 @@ class OperationManager {
             let loc = range.location
             let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: loc)) ?? 0))
             if actualDepth != 0 {
-                undoManager?.beginUndoGrouping()
+                beginUndoGroup()
                 self.process(operation: .indent(location: loc, depth: actualDepth))
-                undoManager?.endUndoGrouping()
+                endUndoGroup()
             }
         } else {
             var isValidIndentOperation: Bool = false
@@ -46,24 +73,24 @@ class OperationManager {
                 let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: range.location)) ?? 0))
                 if actualDepth != 0 {
                     if !isValidIndentOperation {
-                        self.undoManager?.beginUndoGrouping()
+                        self.beginUndoGroup()
                         isValidIndentOperation = true
                     }
                     self.process(operation: .indent(location: range.location, depth: actualDepth))
                 }
             }
             if isValidIndentOperation {
-                undoManager?.endUndoGrouping()
+                endUndoGroup()
             }
         }
-        onChange?(.typingAttributesNeedsUpdate)
+        emitChange(.typingAttributesNeedsUpdate)
     }
 
     func replaceCharacters(in range: NSRange, with string: String) {
-        undoManager?.beginUndoGrouping()
+        beginUndoGroup()
         let operations = self.operationsForReplaceCharacters(in: range, with: string as NSString)
         process(operations: operations)
-        undoManager?.endUndoGrouping()
+        endUndoGroup()
         viewModel?.documentChanged()
     }
     
@@ -117,27 +144,27 @@ class OperationManager {
                 target.process(operation: .delete(range: deletionRange))
             }
             try? viewModel?.insert(text: text, at: index)
-            onChange?(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
+            emitChange(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
             let deletedText = viewModel?.content.substring(with: range) ?? ""
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .insert(text: deletedText, at: range.location))
             }
             try? viewModel?.delete(range: range)
-            onChange?(.textReplaced(range: range, replacement: ""))
+            emitChange(.textReplaced(range: range, replacement: ""))
         case .indent(location: let location, depth: let depth):
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .indent(location: location, depth: -depth))
             }
             if let pRange = try? viewModel?.indent(depth: depth, at: location) {
-                onChange?(.paragraphsInvalidated(pRange))
+                emitChange(.paragraphsInvalidated(pRange))
             }
         case .moveSelection(from: let r1, to: let r2):
             undoManager?.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))
             }
             viewModel?.setSelection(r2)
-            onChange?(.selectionMoved(from: r1, to: r2))
+            emitChange(.selectionMoved(from: r1, to: r2))
         }
         
     }

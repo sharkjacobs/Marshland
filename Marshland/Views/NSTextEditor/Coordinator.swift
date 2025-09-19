@@ -14,30 +14,40 @@ extension NSTextEditor {
         private var typingAttributesParagraphStyle: NSParagraphStyle?
 
         /// Invalidates layout for the specified range using TextKit 2 editing transactions
-        func invalidateLayout(for range: NSRange, in textView: NSTextView) {
-            Task { @MainActor in
-                guard let layoutManager = textView.textContainer?.textLayoutManager,
-                      let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
+        private func invalidateLayout(for range: NSRange, in textView: NSTextView) {
+            guard let layoutManager = textView.textContainer?.textLayoutManager,
+                  let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
 
-                contentStorage.performEditingTransaction {
-                    contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
+            contentStorage.performEditingTransaction {
+                contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
 
-                    if let textContentManager = layoutManager.textContentManager,
-                       let textRange = NSTextRange(range, in: textContentManager) {
-                        layoutManager.invalidateLayout(for: textRange)
-                    }
+                if let textContentManager = layoutManager.textContentManager,
+                   let textRange = NSTextRange(range, in: textContentManager) {
+                    layoutManager.invalidateLayout(for: textRange)
                 }
             }
         }
 
         /// Updates text storage with the given replacement text
-        func updateTextStorage(range: NSRange, replacement: String, in textView: NSTextView) {
-            Task { @MainActor in
-                textView.textStorage?.replaceCharacters(in: range, with: replacement)
+        private func updateTextStorage(range: NSRange, replacement: String, in textView: NSTextView) {
+            textView.textStorage?.replaceCharacters(in: range, with: replacement)
+        }
+
+        /// Processes a single EditorChange - used by both individual and batched handlers
+        func processEditorChange(_ change: EditorChange, in textView: NSTextView) {
+            switch change {
+            case .textReplaced(let range, let replacement):
+                updateTextStorage(range: range, replacement: replacement, in: textView)
+            case .paragraphsInvalidated(let range):
+                invalidateLayout(for: range, in: textView)
+            case .typingAttributesNeedsUpdate:
+                updateIndentationOfTypingAttributes(in: textView)
+            case .selectionMoved(_, let to):
+                textView.setSelectedRange(to)
             }
         }
 
-        func updateIndentationOfTypingAttributes(in textView: NSTextView) {
+        private func updateIndentationOfTypingAttributes(in textView: NSTextView) {
             func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
                 let baseIndentation = 15
                 let indentSize = 20

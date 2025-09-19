@@ -43,20 +43,19 @@ struct NSTextEditor: NSViewRepresentable {
         bridge.textView = textView
         bridge.coordinator = context.coordinator
 
-        // Unified onChange handler
+        // Unified onChange handler (for non-batched changes)
         viewModel.operationManager?.onChange = { [weak textView] change in
             guard let textView = textView else { return }
+            context.coordinator.processEditorChange(change, in: textView)
+        }
 
-            switch change {
-            case .textReplaced(let range, let replacement):
-                context.coordinator.updateTextStorage(range: range, replacement: replacement, in: textView)
-            case .paragraphsInvalidated(let range):
-                context.coordinator.invalidateLayout(for: range, in: textView)
-            case .typingAttributesNeedsUpdate:
-                context.coordinator.updateIndentationOfTypingAttributes(in: textView)
-            case .selectionMoved(_, let to):
-                Task { @MainActor in
-                    textView.setSelectedRange(to)
+        // Batched onChange handler
+        viewModel.operationManager?.onBatchChange = { [weak textView] changes in
+            guard let textView = textView else { return }
+            Task { @MainActor in
+                // TODO: Future optimization - coalesce adjacent textReplaced calls, merge overlapping paragraphsInvalidated ranges
+                for change in changes {
+                    context.coordinator.processEditorChange(change, in: textView)
                 }
             }
         }
