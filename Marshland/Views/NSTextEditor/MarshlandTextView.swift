@@ -38,19 +38,18 @@ class MarshlandTextView: NSTextView {
     override func paste(_ sender: Any?) {
         let pb = NSPasteboard.general
         if let data = pb.data(forType: NSPasteboard.PasteboardType("com.gdb.marshlandchunk")),
-            let chunk = try? JSONDecoder().decode(PasteboardChunk.self, from: data)
+            let chunk = try? JSONDecoder().decode(PasteboardChunk.self, from: data),
+            let coordinator = self.delegate as? NSTextEditor.Coordinator
         {
             let insertRange = selectedRange()
-            self.undoManager?.beginUndoGrouping()
-            self.insertText(chunk.content as Any, replacementRange: insertRange)
-            let tempIs = chunk.indents.map { Indent(location: $0.location + insertRange.location, depth: $0.depth) }
-//            (self.delegate as? NSTextEditor.Coordinator)?.indent(tempIs, in: self)
-            self.undoManager?.endUndoGrouping()
+            coordinator.viewModel.operationManager?.replaceCharacters(in: insertRange, with: chunk.content)
+
+            let adjustedIndents = chunk.indents.map { Indent(location: $0.location + insertRange.location, depth: $0.depth) }
+            coordinator.applyIndentations(adjustedIndents)
 
         } else {
             super.paste(sender)
         }
-
     }
 
     // enabling/disabling the "Copy" menu item

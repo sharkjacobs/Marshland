@@ -191,17 +191,21 @@ Checkpoints:
 
 ---
 
-## Stage 9 – Optional: Move undo registration to VM or keep in OM consistently
+## Stage 9 – Ensure OperationManager consistently handles all undo registration
 
-Goal: Choose a single owner for undo registration for consistency.
+Goal: Make OperationManager the single owner of undo registration, preparing for future undo state machine.
 
 Steps:
-1. [ ] If keeping in OM: Ensure all VM edit methods are “dumb” (pure mutations) and OM consistently registers inverse ops.
-2. [ ] If moving to VM: Add inverse registration inside VM methods and make OM only orchestrate sequences without calling `registerUndo` directly.
-3. [ ] Pick one approach and refactor accordingly; build and run.
+1. [x] Identify inconsistent undo handling: Found custom paste in MarshlandTextView doing manual undo grouping and bypassing OperationManager.
+2. [x] Route custom paste through OperationManager: Replace direct `insertText()` calls with `operationManager?.replaceCharacters()`.
+3. [x] Implement proper indentation handling for paste: Add `applyIndentations(_:)` method in Coordinator that routes through OperationManager's `indent()`.
+4. [x] Remove manual undo grouping: Eliminate direct `undoManager` calls from MarshlandTextView.
+5. [x] Build and run.
 
 Checkpoints:
-- Undo/redo still works as before.
+- [x] OperationManager consistently handles ALL undo registration.
+- [x] Custom paste operations now benefit from batching and consistent undo behavior.
+- [x] Single point of control for undo management, ready for future state machine.
 
 ---
 
