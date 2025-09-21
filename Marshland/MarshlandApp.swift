@@ -39,6 +39,12 @@ struct MarshlandApp: App {
                     }
                 }
                 .keyboardShortcut("9", modifiers: .command)
+                Button("User") {
+                    if let coordinator = editorBridge.coordinator, let textView = editorBridge.textView {
+                        coordinator.viewModel.operationManager?.userCommand()
+                    }
+                }
+                .keyboardShortcut("u", modifiers: .command)
             }
             
             CommandGroup(replacing: CommandGroupPlacement.appInfo) {

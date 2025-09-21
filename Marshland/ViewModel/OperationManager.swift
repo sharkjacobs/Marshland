@@ -81,6 +81,34 @@ class OperationManager {
 //        endUndoGroup()
     }
     
+    public func userCommand() {
+        if var selection = viewModel?.selection, let content = viewModel?.content {
+            // Compute start-of-line for the selection start
+            let startLoc = selection.location
+            var lineStart = startLoc
+            if startLoc > 0 {
+                var idx = startLoc - 1
+                while idx > 0 && content.character(at: idx) != "\n".utf16.first! {
+                    idx -= 1
+                }
+                lineStart = (content.character(at: idx) == "\n".utf16.first!) ? idx + 1 : idx
+            } else {
+                lineStart = 0
+            }
+
+            beginUndoGroup()
+
+            let marker = "<user>\n"
+            process(operation: .insert(text: marker, at: lineStart))
+            endUndoGroup()
+            
+            selection.location += marker.utf16Length
+            self.indent(selection, depth: 1)
+            
+            viewModel?.documentChanged()
+        }
+    }
+    
     // MARK: - Private
     
     private enum Operation {
