@@ -176,6 +176,6 @@ class OperationManager {
             viewModel?.setSelection(r2)
             emitChange(.selectionMoved(from: r1, to: r2))
         }
-        
+        emitChange(.typingAttributesNeedsUpdate)
     }
 }
