@@ -20,41 +20,13 @@ class OperationManager {
         self.viewModel = viewModel
     }
 
-    private func beginUndoGroup() {
-        isUndoGrouping = true
-        changes = []
-        undoManager?.beginUndoGrouping()
-    }
-
-    private func endUndoGroup() {
-        if !changes.isEmpty {
-            onChange?(changes)
-        }
-        changes = []
-        isUndoGrouping = false
-        undoManager?.endUndoGrouping()
-    }
-
-    private func emitChange(_ change: EditorChange) {
-        if isUndoGrouping {
-            changes.append(change)
-        } else {
-            onChange?([change])
-        }
-    }
-
-    private enum Operation {
-        case insert(text: String, at: Int)
-        case delete(range: NSRange)
-        case indent(location: Int, depth: Int)
-        case moveSelection(from: NSRange, to: NSRange)
-    }
+    // MARK: - Public
     
-    func indent(location: Int, depth: Int = 1) {
+    public func indent(location: Int, depth: Int = 1) {
         self.indent(NSRange(location: location, length: 0), depth: depth)
     }
     
-    func indent(_ range: NSRange, depth: Int = 1) {
+    public func indent(_ range: NSRange, depth: Int = 1) {
         guard let content = viewModel?.content else { return }
         if range.length == 0 {
             let loc = range.location
@@ -84,7 +56,7 @@ class OperationManager {
         emitChange(.typingAttributesNeedsUpdate)
     }
 
-    func replaceCharacters(in range: NSRange, with string: String) {
+    public func replaceCharacters(in range: NSRange, with string: String) {
         beginUndoGroup()
         let operations = self.operationsForReplaceCharacters(in: range, with: string as NSString)
         process(operations: operations)
@@ -99,12 +71,44 @@ class OperationManager {
             let adjustedLocation = indent.location + range.location
             operations.append(.indent(location: adjustedLocation, depth: indent.depth))
         }
-        operations += [.moveSelection(from: range, to: NSRange(location: range.location + chunk.content.utf16Length, length: 0))]
         process(operations: operations)
         endUndoGroup()
         viewModel?.documentChanged()
     }
     
+    // MARK: - Private
+    
+    private enum Operation {
+        case insert(text: String, at: Int)
+        case delete(range: NSRange)
+        case indent(location: Int, depth: Int)
+        case moveSelection(from: NSRange, to: NSRange)
+    }
+    
+    private func beginUndoGroup() {
+        isUndoGrouping = true
+        changes = []
+        undoManager?.beginUndoGrouping()
+    }
+
+    private func endUndoGroup() {
+        if !changes.isEmpty {
+            onChange?(changes)
+        }
+        changes = []
+        isUndoGrouping = false
+        undoManager?.endUndoGrouping()
+    }
+
+    private func emitChange(_ change: EditorChange) {
+        if isUndoGrouping {
+            changes.append(change)
+        } else {
+            onChange?([change])
+        }
+    }
+
+
     private func operationsForReplaceCharacters(in range: NSRange, with string: NSString) -> [Operation] {
         var operations: [Operation] = []
         
