@@ -5,7 +5,6 @@
 //  Created by Graham Bing on 2025-09-03.
 //
 
-import Foundation
 import AppKit
 
 @Observable
@@ -98,15 +97,12 @@ class EditorViewModel {
     /// - Parameters:
     ///   - depth: Number of indent levels to add (positive) or remove (negative)
     ///   - location: UTF-16 byte offset in the document where indentation should be applied
-    /// - Returns: The paragraph range that needs layout invalidation after the indentation change
-    func indent(depth: Int, at location: Int) throws -> NSRange {
+    func indent(depth: Int, at location: Int) throws {
         if depth > 0 {
             try document.tree.indent(depth: depth, range: NSRange(location: location, length: 0))
         } else {
             try document.tree.outdent(depth: depth, range: NSRange(location: location, length: 0))
         }
-
-        return content.paragraphRange(for: NSRange(location: location, length: 0))
     }
     
     internal func tendrilTreeDelete(range: NSRange) throws {

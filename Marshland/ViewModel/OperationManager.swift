@@ -7,7 +7,6 @@
 
 
 import Foundation
-import AppKit
 
 class OperationManager {
     var undoManager: UndoManager?
@@ -156,9 +155,8 @@ class OperationManager {
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .indent(location: location, depth: -depth))
             }
-            if let pRange = try? viewModel?.indent(depth: depth, at: location) {
-                emitChange(.paragraphsInvalidated(pRange))
-            }
+            try? viewModel?.indent(depth: depth, at: location)
+            emitChange(.paragraphInvalidated(location: location))
         case .moveSelection(from: let r1, to: let r2):
             undoManager?.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))

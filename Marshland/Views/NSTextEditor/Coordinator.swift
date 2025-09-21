@@ -13,12 +13,16 @@ extension NSTextEditor {
         private var indentationDepth: Int?
         private var typingAttributesParagraphStyle: NSParagraphStyle?
 
-        /// Invalidates layout for the specified range using TextKit 2 editing transactions
-        private func invalidateLayout(for range: NSRange, in textView: NSTextView) {
+        /// Invalidates layout for the specified paragraph using TextKit 2 editing transactions
+        private func invalidateParagraphLayout(for location: Int, in textView: NSTextView) {
             guard let layoutManager = textView.textContainer?.textLayoutManager,
-                  let contentStorage = layoutManager.textContentManager as? NSTextContentStorage else { return }
-
+                  let contentStorage = layoutManager.textContentManager as? NSTextContentStorage
+            else {
+                return
+            }
+            
             contentStorage.performEditingTransaction {
+                let range = (textView.string as NSString).paragraphRange(for: NSRange(location: location, length: 0))
                 contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
 
                 if let textContentManager = layoutManager.textContentManager,
@@ -38,8 +42,8 @@ extension NSTextEditor {
             switch change {
             case .textReplaced(let range, let replacement):
                 updateTextStorage(range: range, replacement: replacement, in: textView)
-            case .paragraphsInvalidated(let range):
-                invalidateLayout(for: range, in: textView)
+            case .paragraphInvalidated(let location):
+                invalidateParagraphLayout(for: location, in: textView)
             case .typingAttributesNeedsUpdate:
                 updateIndentationOfTypingAttributes(in: textView)
             case .selectionMoved(_, let to):
