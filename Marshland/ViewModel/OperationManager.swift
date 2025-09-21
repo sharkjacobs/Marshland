@@ -93,6 +93,19 @@ class OperationManager {
         viewModel?.documentChanged()
     }
     
+    public func paste(_ chunk: PasteboardChunk, in range: NSRange) {
+        beginUndoGroup()
+        var operations = self.operationsForReplaceCharacters(in: range, with: chunk.content as NSString)
+        for indent in chunk.indents {
+            let adjustedLocation = indent.location + range.location
+            operations.append(.indent(location: adjustedLocation, depth: indent.depth))
+        }
+        operations += [.moveSelection(from: range, to: NSRange(location: range.location + chunk.content.utf16Length, length: 0))]
+        process(operations: operations)
+        endUndoGroup()
+        viewModel?.documentChanged()
+    }
+    
     private func operationsForReplaceCharacters(in range: NSRange, with string: NSString) -> [Operation] {
         var operations: [Operation] = []
         

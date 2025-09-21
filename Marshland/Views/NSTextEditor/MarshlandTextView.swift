@@ -42,11 +42,7 @@ class MarshlandTextView: NSTextView {
             let coordinator = self.delegate as? NSTextEditor.Coordinator
         {
             let insertRange = selectedRange()
-            coordinator.viewModel.operationManager?.replaceCharacters(in: insertRange, with: chunk.content)
-
-            let adjustedIndents = chunk.indents.map { Indent(location: $0.location + insertRange.location, depth: $0.depth) }
-            coordinator.applyIndentations(adjustedIndents)
-
+            coordinator.viewModel.operationManager?.paste(chunk, in: insertRange)
         } else {
             super.paste(sender)
         }
