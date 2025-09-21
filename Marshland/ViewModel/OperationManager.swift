@@ -11,11 +11,10 @@ import Foundation
 class OperationManager {
     var undoManager: UndoManager?
     private weak var viewModel: EditorViewModel?
-    var onChange: ((EditorChange) -> Void)?
-    var onBatchChange: (([EditorChange]) -> Void)?
+    var onChange: (([EditorChange]) -> Void)?
 
     private var isUndoGrouping: Bool = false
-    private var batchedChanges: [EditorChange] = []
+    private var changes: [EditorChange] = []
 
     init(viewModel: EditorViewModel) {
         self.viewModel = viewModel
@@ -23,24 +22,24 @@ class OperationManager {
 
     private func beginUndoGroup() {
         isUndoGrouping = true
-        batchedChanges = []
+        changes = []
         undoManager?.beginUndoGrouping()
     }
 
     private func endUndoGroup() {
-        if !batchedChanges.isEmpty {
-            onBatchChange?(batchedChanges)
+        if !changes.isEmpty {
+            onChange?(changes)
         }
-        batchedChanges = []
+        changes = []
         isUndoGrouping = false
         undoManager?.endUndoGrouping()
     }
 
     private func emitChange(_ change: EditorChange) {
         if isUndoGrouping {
-            batchedChanges.append(change)
+            changes.append(change)
         } else {
-            onChange?(change)
+            onChange?([change])
         }
     }
 
