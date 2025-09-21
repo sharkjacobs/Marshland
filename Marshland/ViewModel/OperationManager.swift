@@ -138,6 +138,16 @@ class OperationManager {
                 }
             }
         }
+        
+        if range.upperBound - 1 > 0, content.character(at: range.upperBound - 1) == "\n".utf16.first! {
+            if let indentation = try? self.viewModel?.indentation(at: range.upperBound) {
+                let delta = baseIndentation - indentation
+                if delta != 0 {
+                    operations.append(.indent(location: range.upperBound, depth: delta))
+                }
+            }
+        }
+
         return operations
     }
     
