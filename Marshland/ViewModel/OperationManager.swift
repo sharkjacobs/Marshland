@@ -53,7 +53,6 @@ class OperationManager {
                 endUndoGroup()
             }
         }
-        emitChange(.typingAttributesNeedsUpdate)
     }
 
     public func replaceCharacters(in range: NSRange, with string: String) {
@@ -74,6 +73,12 @@ class OperationManager {
         process(operations: operations)
         endUndoGroup()
         viewModel?.documentChanged()
+    }
+    
+    public func moveSelection(from: NSRange, to: NSRange) {
+//        beginUndoGroup()
+        process(operation: .moveSelection(from: from, to: to))
+//        endUndoGroup()
     }
     
     // MARK: - Private
@@ -184,11 +189,11 @@ class OperationManager {
             try? viewModel?.indent(depth: depth, at: location)
             emitChange(.paragraphInvalidated(location: location))
         case .moveSelection(from: let r1, to: let r2):
-            undoManager?.registerUndo(withTarget: self) { weakSelf in
-                weakSelf.process(operation: .moveSelection(from: r2, to: r1))
-            }
+//            undoManager?.registerUndo(withTarget: self) { weakSelf in
+//                weakSelf.process(operation: .moveSelection(from: r2, to: r1))
+//            }
             viewModel?.setSelection(r2)
-            emitChange(.selectionMoved(from: r1, to: r2))
+//            emitChange(.selectionMoved(from: r1, to: r2))
         }
         emitChange(.typingAttributesNeedsUpdate)
     }
