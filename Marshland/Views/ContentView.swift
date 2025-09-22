@@ -15,52 +15,56 @@ struct ContentView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            ZStack(alignment: .bottomTrailing) {
-                NSTextEditor(viewModel: viewModel)
-                if #available(macOS 26.0, *) {
-                    Button(action: {
-                        viewModel.llmRespond()
-                    }) {
-                        Image(systemName: "lizard.fill")
+        VStack {
+            HStack(spacing: 0) {
+                ZStack(alignment: .bottomTrailing) {
+                    NSTextEditor(viewModel: viewModel)
+                    if #available(macOS 26.0, *) {
+                        Button(action: {
+                            viewModel.llmRespond()
+                        }) {
+                            Image(systemName: "lizard.fill")
+                        }
+                        .buttonStyle(.glass)
+                        .padding()
+                        .disabled(viewModel.isLLMResponding)
                     }
-                    .buttonStyle(.glass)
-                    .padding()
-                    .disabled(viewModel.isLLMResponding)
+                }
+                if viewModel.isSidebarVisible {
+                    Divider()
+                    ScrollView {
+                        MessagesView(messages: viewModel.messages)
+                    }
+                    .frame(width: 320)
+                    .transition(.move(edge: .trailing))
+                    
                 }
             }
-            if viewModel.isSidebarVisible {
-                Divider()
-                ScrollView {
-                    MessagesView(messages: viewModel.messages)
+            .animation(.default, value: viewModel.isSidebarVisible)
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button(action: {
+                        viewModel.toggleSidebar()
+                    }) {
+                        Image(systemName: "sidebar.right")
+                    }
+                    .help(viewModel.isSidebarVisible ? "Hide Messages" : "Show Messages")
                 }
-                .frame(width: 320)
-                .transition(.move(edge: .trailing))
-
+                ToolbarItem(placement: .automatic) {
+                    Button(action: { viewModel.reloadMessages() }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(!viewModel.isSidebarVisible)
+                    .help("Reload Messages")
+                }
             }
-        }
-        .animation(.default, value: viewModel.isSidebarVisible)
-        .toolbar {
-            ToolbarItem(placement: .status) {
+            HStack {
+//                StatusBarView(viewModel: viewModel)
+//                Spacer()
                 if let statusString = viewModel.llmStatusMessage {
                     Text(statusString)
                         .monospacedDigit()
                 }
-            }
-            ToolbarItem(placement: .automatic) {
-                Button(action: {
-                    viewModel.toggleSidebar()
-                }) {
-                    Image(systemName: "sidebar.right")
-                }
-                .help(viewModel.isSidebarVisible ? "Hide Messages" : "Show Messages")
-            }
-            ToolbarItem(placement: .automatic) {
-                Button(action: { viewModel.reloadMessages() }) {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .disabled(!viewModel.isSidebarVisible)
-                .help("Reload Messages")
             }
         }
     }
