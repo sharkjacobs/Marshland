@@ -150,7 +150,7 @@ class EditorViewModel {
         var indents = [Indent]()
         for (_, lineRange, indentation) in document.tree.lines(in: range) {
             indents.append(Indent(
-                location: lineRange.location - range.location,
+                location: max(0, lineRange.location - range.location),
                 depth: indentation - baseIndentation
             ))
         }
