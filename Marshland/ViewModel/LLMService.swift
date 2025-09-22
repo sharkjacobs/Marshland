@@ -10,7 +10,7 @@ import SwiftAnthropic
 import TendrilTree
 
 @Observable
-class LLMService {
+final class LLMService: Sendable {
     var isResponding: Bool = false
     var tokenOutput: Int = 0
     var tokenInput: Int = 0
@@ -21,22 +21,26 @@ class LLMService {
     private var timer: Timer?
     private func startTimer() {
         let endTime = Date().addingTimeInterval(300)
-        timer?.invalidate()
-        self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            let timeRemaining = endTime.timeIntervalSinceNow
-            
-            if timeRemaining <= 0 {
-                self.time = nil
-                timer.invalidate()
+        self.time = Int(endTime.timeIntervalSinceNow)
+        Task { @MainActor in
+            timer?.invalidate()
+            self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+                let timeRemaining = endTime.timeIntervalSinceNow
+                
+                if timeRemaining <= 0 {
+                    self.time = nil
+                    timer.invalidate()
+                }
+                
+                self.time = Int(timeRemaining)
             }
-
-            self.time = Int(timeRemaining)
         }
     }
 
     func respond(messages: [Message], completion: (String) -> Void) async {
         guard
-            let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey")
+            let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey"),
+            !isResponding
         else { return }
 
         let parameters = messages.toAnthropicParameters()

@@ -14,19 +14,39 @@ class EditorViewModel {
     var operationManager: OperationManager?
 
     var isSidebarVisible: Bool = false
-    var llmStatusMessage: String?
-    var isLLMResponding: Bool = false
     var messages = [Message]()
     var content: NSString { document.tree.string as NSString }
 
     var selection: NSRange = NSRange(location: 0, length: 0)
+    
+    var llmStatusMessage: String? {
+        guard
+            let time = llmService.time,
+            (llmService.cacheTokenRead != 0 || llmService.cacheTokenWrite != 0)
+        else {
+            return nil
+        }
 
+        let cacheWrite = llmService.cacheTokenWrite > 0 ? "\(llmService.cacheTokenWrite) → " : ""
+        let cacheRead  = llmService.cacheTokenRead  > 0 ? " → \(llmService.cacheTokenRead)"  : ""
+        let cacheTokens = "\(cacheWrite)💾\(cacheRead)"
+
+        let minutes = time / 60
+        let seconds = time % 60
+        let timeString = String(format: "%d:%02d", minutes, seconds)
+
+        return timeString + " | " + cacheTokens
+    }
+
+    var isLLMResponding: Bool {
+        llmService.isResponding
+    }
+    
     init(document: MarshlandDocument, llmService: LLMService = LLMService()) {
         self.document = document
         self.llmService = llmService
 
         self.operationManager = OperationManager(viewModel: self)
-        self.observeLLMService()
     }
 
     func documentChanged() {
@@ -35,32 +55,6 @@ class EditorViewModel {
 
     func setSelection(_ range: NSRange) {
         selection = range
-    }
-
-    func observeLLMService() {
-        withObservationTracking {
-            _ = llmService.time
-        } onChange: { [weak self] in
-            self?.llmStatusMessage = {
-                guard
-                    let llmService = self?.llmService,
-                    let time = llmService.time,
-                    (llmService.cacheTokenRead != 0 || llmService.cacheTokenWrite != 0)
-                else {
-                    return nil
-                }
-                
-                let cacheWrite = llmService.cacheTokenWrite > 0 ? "\(llmService.cacheTokenWrite) → " : ""
-                let cacheRead = llmService.cacheTokenRead > 0 ? " → \(llmService.cacheTokenRead)" : ""
-                let cacheTokens = "\(cacheWrite)💾\(cacheRead)"
-
-                let minutes = time / 60
-                let seconds = time % 60
-                let timeString = String(format: "%d:%02d", minutes, seconds)
-                return timeString + " | " + cacheTokens
-            }()
-            self?.observeLLMService()
-        }
     }
     
     func toggleSidebar() {

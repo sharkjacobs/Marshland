@@ -11,7 +11,7 @@ struct ContentView: View {
     @State private var viewModel: EditorViewModel
 
     init(document: MarshlandDocument) {
-        self.viewModel = EditorViewModel(document: document)
+        _viewModel = State(initialValue: EditorViewModel(document: document))
     }
 
     var body: some View {
