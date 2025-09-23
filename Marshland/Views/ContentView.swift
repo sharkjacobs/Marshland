@@ -40,6 +40,7 @@ struct ContentView: View {
                     
                 }
             }
+            .focusedSceneValue(\.viewModel, $viewModel)
             .animation(.default, value: viewModel.isSidebarVisible)
             .toolbar {
                 ToolbarItem(placement: .automatic) {

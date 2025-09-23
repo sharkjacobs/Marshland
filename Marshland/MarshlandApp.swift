@@ -9,7 +9,8 @@ import SwiftUI
 
 @main
 struct MarshlandApp: App {
-    @StateObject private var editorBridge = EditorBridge()
+    @FocusedBinding(\.viewModel) var viewModel
+
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -19,30 +20,21 @@ struct MarshlandApp: App {
             },
             editor: { file in
                 ContentView(document: file.document)
-                    .environmentObject(editorBridge)
             }
         )
         .commands {
             CommandMenu("Outline") {
                 Button("Expand") {
-                    if let coordinator = editorBridge.coordinator, let textView = editorBridge.textView {
-                        let range = textView.selectedRange()
-                        coordinator.expand(range, in: textView)
-                    }
+                    print("TODO: expand")
                 }
                 .keyboardShortcut("0", modifiers: .command)
 
                 Button("Collapse") {
-                    if let coordinator = editorBridge.coordinator, let textView = editorBridge.textView {
-                        let range = textView.selectedRange()
-                        coordinator.collapse(range, in: textView)
-                    }
+                    print("TODO: collapse")
                 }
                 .keyboardShortcut("9", modifiers: .command)
                 Button("User") {
-                    if let coordinator = editorBridge.coordinator, let textView = editorBridge.textView {
-                        coordinator.viewModel.operationManager?.userCommand()
-                    }
+                    self.viewModel?.operationManager?.userCommand()
                 }
                 .keyboardShortcut("u", modifiers: .command)
             }

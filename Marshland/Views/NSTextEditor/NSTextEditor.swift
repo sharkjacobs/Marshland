@@ -10,14 +10,8 @@ import SwiftUI
 import TendrilTree
 import STTextKitPlus
 
-class EditorBridge: ObservableObject {
-    weak var textView: NSTextView?
-    weak var coordinator: NSTextEditor.Coordinator?
-}
-
 struct NSTextEditor: NSViewRepresentable {
     var viewModel: EditorViewModel
-    @EnvironmentObject var bridge: EditorBridge
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView: NSScrollView = MarshlandTextView.scrollableTextView()
@@ -39,9 +33,6 @@ struct NSTextEditor: NSViewRepresentable {
         layoutManager?.delegate = context.coordinator as? any NSTextLayoutManagerDelegate
         let textContentStorage = layoutManager?.textContentManager as? NSTextContentStorage
         textContentStorage?.delegate = context.coordinator
-
-        bridge.textView = textView
-        bridge.coordinator = context.coordinator
 
         // Batched onChange handler
         viewModel.operationManager?.onChange = { [weak textView] changes in
