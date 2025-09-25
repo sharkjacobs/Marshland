@@ -22,6 +22,7 @@ struct MarshlandApp: App {
                 ContentView(document: file.document)
             }
         )
+        .defaultSize(width: 640, height: 720)
         .commands {
             CommandMenu("Outline") {
                 Button("Expand") {
