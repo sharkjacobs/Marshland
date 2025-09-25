@@ -26,13 +26,13 @@ final class LLMService: Sendable {
             timer?.invalidate()
             self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
                 let timeRemaining = endTime.timeIntervalSinceNow
-                
+                self.time = Int(timeRemaining)
+
                 if timeRemaining <= 0 {
                     self.time = nil
                     timer.invalidate()
                 }
-                
-                self.time = Int(timeRemaining)
+
             }
         }
     }
