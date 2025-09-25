@@ -59,14 +59,7 @@ struct ContentView: View {
                     .help("Reload Messages")
                 }
             }
-            HStack {
-//                StatusBarView(viewModel: viewModel)
-//                Spacer()
-                if let statusString = viewModel.llmStatusMessage {
-                    Text(statusString)
-                        .monospacedDigit()
-                }
-            }
+            StatusBarView(wordCount: viewModel.wordCount, llmStatusMessage: viewModel.llmStatusMessage)
         }
     }
 }

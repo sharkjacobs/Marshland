@@ -16,6 +16,7 @@ class EditorViewModel {
     var isSidebarVisible: Bool = false
     var messages = [Message]()
     var content: NSString { document.tree.string as NSString }
+    var wordCount: Int = 0
 
     var selection: NSRange = NSRange(location: 0, length: 0)
     
@@ -47,6 +48,7 @@ class EditorViewModel {
         self.llmService = llmService
 
         self.operationManager = OperationManager(viewModel: self)
+        wordCount = document.tree.count
     }
 
     func documentChanged() {
@@ -111,10 +113,12 @@ class EditorViewModel {
 
     func insert(text: String, at location: Int) throws {
         try tendrilTreeInsert(content: text, at: location)
+        wordCount = document.tree.count
     }
 
     func delete(range: NSRange) throws {
         try tendrilTreeDelete(range: range)
+        wordCount = document.tree.count
     }
 
     func indent(range: NSRange, depth: Int) throws {
