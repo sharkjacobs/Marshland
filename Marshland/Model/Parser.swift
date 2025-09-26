@@ -8,6 +8,22 @@
 import Foundation
 import TendrilTree
 
+// MARK: - Constants
+private enum ParsingConstants {
+    static let userTag = "<user>\n"
+    static let systemTag = "<system>\n"
+    static let baseIndentation = 0
+    static let contentIndentation = 1
+}
+
+// MARK: - Helper Functions
+private func isMessageTag(_ line: String, at indentation: Int) -> Bool {
+    return indentation == ParsingConstants.baseIndentation &&
+           (line == ParsingConstants.userTag || line == ParsingConstants.systemTag)
+}
+
+// MARK: - TendrilTree
+
 extension TendrilTree {
     /**
      Parses the tree's content into an array of structured `Message` objects based on special tags and indentation.
@@ -26,8 +42,7 @@ extension TendrilTree {
      - **Indentation and Content:}
        - The parser automatically closes open XML tags when the indentation level decreases to that of the opening tag or less.
        - Content within tags is de-indented by one level for each level of tag nesting. For example, text inside `<b><i>...` will have two levels of indentation removed from its original source.
-       - A tag that contains no content (e.g., `<tag>
-</tag>` or an opening tag followed by a line with decreased indentation) will be rendered simply as `<tag>`.
+       - A tag that contains no content (e.g., `<tag>\n</tag>` or an opening tag followed by a line with decreased indentation) will be rendered simply as `<tag>`.
 
      - **Edge Cases:**
        - An empty message block (e.g., `<user>` followed immediately by another message tag) will produce a `Message` with empty content.
@@ -59,6 +74,8 @@ extension TendrilTree {
     }
 }
 
+// MARK: - Message
+
 public struct Message: Equatable {
     public enum Kind {
         case system
@@ -87,6 +104,8 @@ public struct Message: Equatable {
     }
 }
 
+// MARK: - Parser
+
 protocol Parser {
     var content: String { get }
     var _content: String { get set }
@@ -101,7 +120,9 @@ protocol Parser {
 extension Parser {
     var content: String {
         if let parser = _parser {
-            return _content + parser.content.withIndentation(parser.indentation - self._contentIndentation)
+            var result = _content
+            result += parser.content.withIndentation(parser.indentation - self._contentIndentation)
+            return result
         } else {
             return _content
         }
@@ -114,7 +135,7 @@ extension Parser {
             return false
         }
 
-        guard indentation != 0 || (line != "<user>\n" && line != "<system>\n") else {
+        guard !isMessageTag(line, at: indentation) else {
             return false
         }
 
@@ -149,12 +170,12 @@ func messageParserFactory(_ line: String, indentation: Int) -> Parser? {
 
 struct UserMessageParser: Parser {
     var _content: String = ""
-    let indentation: Int = 0
-    let _contentIndentation: Int = 1
+    let indentation: Int = ParsingConstants.baseIndentation
+    let _contentIndentation: Int = ParsingConstants.contentIndentation
     var _parser: Parser?
 
     init?(_ line: String, indentation: Int = 0) {
-        if line != "<user>\n" {
+        if line != ParsingConstants.userTag {
             return nil
         }
     }
@@ -162,12 +183,12 @@ struct UserMessageParser: Parser {
 
 struct SystemMessageParser: Parser {
     var _content: String = ""
-    let indentation: Int = 0
-    let _contentIndentation: Int = 1
+    let indentation: Int = ParsingConstants.baseIndentation
+    let _contentIndentation: Int = ParsingConstants.contentIndentation
     var _parser: Parser?
 
     init?(_ line: String, indentation: Int = 0) {
-        if line != "<system>\n" {
+        if line != ParsingConstants.systemTag {
             return nil
         }
     }
@@ -176,14 +197,16 @@ struct SystemMessageParser: Parser {
 struct AssistantMessageParser: Parser {
     var content: String {
         if let parser = _parser {
-            return _content + parser.content.withIndentation(parser.indentation - self._contentIndentation)
+            var result = _content
+            result += parser.content.withIndentation(parser.indentation - self._contentIndentation)
+            return result
         } else {
             return _content
         }
     }
     var _content: String = ""
-    let indentation: Int = 0
-    let _contentIndentation: Int = 0
+    let indentation: Int = ParsingConstants.baseIndentation
+    let _contentIndentation: Int = ParsingConstants.baseIndentation
     var _parser: Parser?
 
     init?(_ line: String, indentation: Int = 0) {
@@ -207,7 +230,7 @@ struct AssistantMessageParser: Parser {
         }
 
         if _parser == nil {
-            if indentation == 0 && line == "<user>\n" || line == "<system>\n" {
+            if isMessageTag(line, at: indentation) {
                 return false
             } else if let tagParser = TagParser(line, indentation: indentation) {
                 _parser = tagParser
@@ -226,22 +249,30 @@ struct TagParser: Parser {
     let _contentIndentation: Int
     var _content: String = ""
     var content: String {
-        var result = "<" + tag + ">\n"
-        if _content != "" {
-            result += _content
+        var components: [String] = []
+        components.append("<\(tag)>\n")
+
+        if !_content.isEmpty {
+            components.append(_content)
         }
-        if let _parser {
-            result += _parser.content
+
+        if let parser = _parser {
+            components.append(parser.content)
         }
-        var noNewline = false
-        if !result.hasSuffix("\n") {
+
+        var result = components.joined()
+        let noNewline = !result.hasSuffix("\n")
+        if noNewline {
             result += "\n"
-            noNewline = true
         }
-        if _content != "" || _parser != nil {
-            result += "</" + tag + ">"
-            if !noNewline { result += "\n" }
+
+        if !_content.isEmpty || _parser != nil {
+            result += "</\(tag)>"
+            if !noNewline {
+                result += "\n"
+            }
         }
+
         return result
     }
 
@@ -271,7 +302,7 @@ struct ContentParser: Parser {
     }
 
     mutating func consume(_ line: String, indentation: Int) -> Bool {
-        if indentation == 0 && line == "<user>\n" || line == "<system>\n" {
+        if isMessageTag(line, at: indentation) {
             return false
         }
 
