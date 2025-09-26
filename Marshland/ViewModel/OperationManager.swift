@@ -66,6 +66,20 @@ class OperationManager {
     }
     
     public func tagCommand(_ tag: String) {
+        guard let selection = viewModel?.selection else { return }
+        let marker = "<\(tag)>\n"
+
+        if let taggedRange = taggedRange(tag, at: selection) {
+            beginUndoGroup()
+            process(operation: .indentRange(range: taggedRange, depth: -1))
+            let tagLength = marker.utf16.count
+            let tagRange = NSRange(location: taggedRange.location, length: tagLength)
+            process(operation: .deletePreservingIndentation(range: tagRange))
+//            process(operation: .moveSelection(from: selection, to: NSRange(location: taggedRange.location, length: taggedRange.length)))
+            endUndoGroup()
+            return
+        }
+        
         if var selection = viewModel?.selection, let content = viewModel?.content {
             // Compute start-of-line for the selection start
             let startLoc = selection.location
@@ -81,23 +95,97 @@ class OperationManager {
             }
 
             beginUndoGroup()
-
-            let marker = "<\(tag)>\n"
             process(operation: .insert(text: marker, at: lineStart))
-            endUndoGroup()
-            
             selection.location += marker.utf16Length
-            self.indent(selection, depth: 1)
-            
+            if selection.length > 0 {
+                process(operation: .indentRange(range: selection, depth: 1))
+            } else {
+                process(operation: .indentLocation(location: selection.location, depth: 1))
+            }
+            // this doesn't account for the possibility that the first line of a multiline selection
+            // might not be the baseIndentation.
+            // e.g. "\tabc\ndef"
+            //      will become "\t<tag>\n\t\tabc\n\tdef"
+            //      but should be "<tag>\n\t\tabc\n\tdef"
+            endUndoGroup()
+
             viewModel?.documentChanged()
         }
     }
     
+    private func taggedRange(_ tag: String, at selection: NSRange) -> NSRange? {
+        guard let content = viewModel?.content,
+              let baseIndentation = try? viewModel?.indentation(at: selection.location)
+        else {
+            // throw error?
+            return nil
+        }
+        let marker = "<\(tag)>"
+        
+        var startLocation: Int? = nil
+        
+        // is <tag> part of the selection
+        let lr = content.lineRange(for: selection)
+        let len = marker.utf16Length
+        if lr.location + len < content.length,
+           content.substring(with: NSRange(location: lr.location, length: len)) == marker {
+            startLocation = lr.location
+        }
+
+        var tagIndentation: Int = baseIndentation
+        if startLocation == nil {
+            content.enumerateSubstrings(
+                in: NSRange(location: 0, length: viewModel?.selection.upperBound ?? 0),
+                options: [.byLines, .reverse]
+            ) { (subString, range, _, stop) in
+                if let indentation = try? self.viewModel?.indentation(at: range.location) {
+                    if indentation < tagIndentation {
+                        tagIndentation = indentation
+                        if subString == marker {
+                            startLocation = range.location
+                            stop.pointee = true
+                            return
+                        }
+                    }
+                    if indentation == 0 {
+                        stop.pointee = true
+                        return
+                    }
+                }
+            }
+        }
+        
+        guard let startLocation else {
+            return nil
+        }
+        
+        var length: Int = 0
+        let indentedContentLocation = startLocation + marker.utf16Length + 1
+        content.enumerateSubstrings(
+            in: NSRange(location: indentedContentLocation, length: content.length - indentedContentLocation),
+            options: .byLines
+        ) { (_, _, enclosingRange, stop) in
+            if let indentation = try? self.viewModel?.indentation(at: enclosingRange.location),
+            indentation > tagIndentation {
+                length += enclosingRange.length
+            } else {
+                stop.pointee = true
+            }
+        }
+
+        guard length > 0 else {
+            return nil
+        }
+        
+        return NSRange(location: startLocation, length: length + marker.utf16Length + 1)
+    }
+
     // MARK: - Private
     
     private enum Operation {
         case insert(text: String, at: Int)
         case delete(range: NSRange)
+        case deletePreservingIndentation(range: NSRange)
         case indentLocation(location: Int, depth: Int)
         case indentRange(range: NSRange, depth: Int)
         case moveSelection(from: NSRange, to: NSRange)
@@ -199,6 +287,13 @@ class OperationManager {
             }
             try? viewModel?.delete(range: range)
             emitChange(.textReplaced(range: range, replacement: ""))
+        case .deletePreservingIndentation(range: let range):
+            let preservedIndentation = (try? viewModel?.indentation(at: range.upperBound)) ?? 0
+            let change = preservedIndentation - ((try? viewModel?.indentation(at: range.location)) ?? 0)
+            if change != 0 {
+                process(operation: .indentLocation(location: range.location, depth: change))
+            }
+            process(operation: .delete(range: range))
         case .indentRange(range: let range, depth: let depth):
             guard let content = viewModel?.content else { return }
             
