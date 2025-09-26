@@ -23,35 +23,19 @@ class OperationManager {
     // MARK: - Public
     
     public func indent(location: Int, depth: Int = 1) {
-        self.indent(NSRange(location: location, length: 0), depth: depth)
+        beginUndoGroup()
+        process(operation: .indentLocation(location: location, depth: depth))
+        endUndoGroup()
     }
     
     public func indent(_ range: NSRange, depth: Int = 1) {
         guard let content = viewModel?.content else { return }
         if range.length == 0 {
-            let loc = range.location
-            let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: loc)) ?? 0))
-            if actualDepth != 0 {
-                beginUndoGroup()
-                self.process(operation: .indent(location: loc, depth: actualDepth))
-                endUndoGroup()
-            }
+            self.indent(location: range.location, depth: depth)
         } else {
-            var isValidIndentOperation: Bool = false
-            content.enumerateSubstrings(in: range, options: .byLines) {
-                (_, range, _, _) in
-                let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: range.location)) ?? 0))
-                if actualDepth != 0 {
-                    if !isValidIndentOperation {
-                        self.beginUndoGroup()
-                        isValidIndentOperation = true
-                    }
-                    self.process(operation: .indent(location: range.location, depth: actualDepth))
-                }
-            }
-            if isValidIndentOperation {
-                endUndoGroup()
-            }
+            beginUndoGroup()
+            process(operation: .indentRange(range: range, depth: depth))
+            endUndoGroup()
         }
     }
 
@@ -68,7 +52,7 @@ class OperationManager {
         var operations = self.operationsForReplaceCharacters(in: range, with: chunk.content as NSString)
         for indent in chunk.indents {
             let adjustedLocation = indent.location + range.location
-            operations.append(.indent(location: adjustedLocation, depth: indent.depth))
+            operations.append(.indentLocation(location: adjustedLocation, depth: indent.depth))
         }
         process(operations: operations)
         endUndoGroup()
@@ -114,23 +98,28 @@ class OperationManager {
     private enum Operation {
         case insert(text: String, at: Int)
         case delete(range: NSRange)
-        case indent(location: Int, depth: Int)
+        case indentLocation(location: Int, depth: Int)
+        case indentRange(range: NSRange, depth: Int)
         case moveSelection(from: NSRange, to: NSRange)
     }
     
     private func beginUndoGroup() {
+        undoManager?.beginUndoGrouping()
         isUndoGrouping = true
         changes = []
-        undoManager?.beginUndoGrouping()
     }
 
     private func endUndoGroup() {
+        undoManager?.endUndoGrouping()
+
         if !changes.isEmpty {
+            emitChange(.typingAttributesNeedsUpdate)
             onChange?(changes)
+        } else {
+            undoManager?.undo()
         }
         changes = []
         isUndoGrouping = false
-        undoManager?.endUndoGrouping()
     }
 
     private func emitChange(_ change: EditorChange) {
@@ -171,7 +160,7 @@ class OperationManager {
             if let indentation = try? self.viewModel?.indentation(at: range.location) {
                 let delta = baseIndentation - indentation
                 if delta != 0 {
-                    operations.append(.indent(location: range.location, depth: delta))
+                    operations.append(.indentLocation(location: range.location, depth: delta))
                 }
             }
         }
@@ -180,7 +169,7 @@ class OperationManager {
             if let indentation = try? self.viewModel?.indentation(at: range.upperBound) {
                 let delta = baseIndentation - indentation
                 if delta != 0 {
-                    operations.append(.indent(location: range.upperBound, depth: delta))
+                    operations.append(.indentLocation(location: range.upperBound, depth: delta))
                 }
             }
         }
@@ -210,11 +199,28 @@ class OperationManager {
             }
             try? viewModel?.delete(range: range)
             emitChange(.textReplaced(range: range, replacement: ""))
-        case .indent(location: let location, depth: let depth):
-            undoManager?.registerUndo(withTarget: self) { target in
-                target.process(operation: .indent(location: location, depth: -depth))
+        case .indentRange(range: let range, depth: let depth):
+            guard let content = viewModel?.content else { return }
+            
+            content.enumerateSubstrings(in: range, options: .byLines) {
+                (_, range, _, _) in
+                let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: range.location)) ?? 0))
+                if actualDepth != 0 {
+                    self.process(operation: .indentLocation(location: range.location, depth: actualDepth))
+                }
             }
-            try? viewModel?.indent(depth: depth, at: location)
+        case .indentLocation(location: let location, depth: let depth):
+            guard let viewModel else { return }
+            
+            let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: location)) ?? 0))
+            guard actualDepth != 0 else {
+                return
+            }
+            
+            undoManager?.registerUndo(withTarget: self) { target in
+                target.process(operation: .indentLocation(location: location, depth: -actualDepth))
+            }
+            try? viewModel.indent(depth: actualDepth, at: location)
             emitChange(.paragraphInvalidated(location: location))
         case .moveSelection(from: let r1, to: let r2):
 //            undoManager?.registerUndo(withTarget: self) { weakSelf in
@@ -223,6 +229,5 @@ class OperationManager {
             viewModel?.setSelection(r2)
 //            emitChange(.selectionMoved(from: r1, to: r2))
         }
-        emitChange(.typingAttributesNeedsUpdate)
     }
 }
