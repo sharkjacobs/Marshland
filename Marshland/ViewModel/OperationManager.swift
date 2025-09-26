@@ -200,8 +200,7 @@ class OperationManager {
     private func endUndoGroup() {
         undoManager?.endUndoGrouping()
 
-        if !changes.isEmpty {
-            emitChange(.typingAttributesNeedsUpdate)
+        if !changes.filter( { $0 == .typingAttributesNeedsUpdate }).isEmpty {
             onChange?(changes)
         } else {
             undoManager?.undo()
@@ -324,5 +323,6 @@ class OperationManager {
             viewModel?.setSelection(r2)
 //            emitChange(.selectionMoved(from: r1, to: r2))
         }
+        emitChange(.typingAttributesNeedsUpdate)
     }
 }

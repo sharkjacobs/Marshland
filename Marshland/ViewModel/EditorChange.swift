@@ -1,6 +1,6 @@
 import Foundation
 
-enum EditorChange {
+enum EditorChange: Equatable {
     case textReplaced(range: NSRange, replacement: String)
     case paragraphInvalidated(location: Int)
     case typingAttributesNeedsUpdate
