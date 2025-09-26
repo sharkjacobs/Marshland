@@ -81,7 +81,7 @@ class OperationManager {
 //        endUndoGroup()
     }
     
-    public func userCommand() {
+    public func tagCommand(_ tag: String) {
         if var selection = viewModel?.selection, let content = viewModel?.content {
             // Compute start-of-line for the selection start
             let startLoc = selection.location
@@ -98,7 +98,7 @@ class OperationManager {
 
             beginUndoGroup()
 
-            let marker = "<user>\n"
+            let marker = "<\(tag)>\n"
             process(operation: .insert(text: marker, at: lineStart))
             endUndoGroup()
             

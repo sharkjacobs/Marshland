@@ -35,9 +35,13 @@ struct MarshlandApp: App {
                 }
                 .keyboardShortcut("9", modifiers: .command)
                 Button("User") {
-                    self.viewModel?.operationManager?.userCommand()
+                    self.viewModel?.operationManager?.tagCommand("user")
                 }
                 .keyboardShortcut("u", modifiers: .command)
+                Button("Comment") {
+                    self.viewModel?.operationManager?.tagCommand("comment")
+                }
+                .keyboardShortcut("/", modifiers: .command)
             }
             
             CommandGroup(replacing: CommandGroupPlacement.appInfo) {
