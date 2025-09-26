@@ -12,6 +12,7 @@ import TendrilTree
 private enum ParsingConstants {
     static let userTag = "<user>\n"
     static let systemTag = "<system>\n"
+    static let commentTag = "<comment>\n"
     static let baseIndentation = 0
     static let contentIndentation = 1
 }
@@ -273,7 +274,11 @@ struct TagParser: Parser {
             }
         }
 
-        return result
+        if tag == "comment" {
+            return ""
+        } else {
+            return result
+        }
     }
 
     var _parser: Parser?

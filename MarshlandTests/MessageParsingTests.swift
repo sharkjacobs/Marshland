@@ -62,14 +62,14 @@ import Foundation
     }
 
     @Test func testCommentParser() throws {
-        #expect(CommentParser("comment") == nil)
-        #expect(CommentParser("<comment>") == nil)
-        #expect(CommentParser("<comment>\n") != nil)
-        #expect(CommentParser("<comment>\n")?.content == "")
+        #expect(TagParser("comment") == nil)
+        #expect(TagParser("<comment>") == nil)
+        #expect(TagParser("<comment>\n") != nil)
+        #expect(TagParser("<comment>\n")?.content == "")
     }
 
     @Test func testCommentParser_consume() throws {
-        var parser = CommentParser("<comment>\n")
+        var parser = TagParser("<comment>\n")
         #expect(parser?.content == "")
         #expect(parser?.consume("this is ignored\n", indentation: 1) == true)
         #expect(parser?.content == "")
@@ -80,7 +80,7 @@ import Foundation
     }
 
     @Test func testCommentParser_endsByDeindentation() throws {
-        var parser = CommentParser("<comment>\n", indentation: 1)
+        var parser = TagParser("<comment>\n", indentation: 1)
         #expect(parser?.consume("ignored\n", indentation: 2) == true)
         #expect(parser?.consume("not consumed\n", indentation: 1) == false)
         #expect(parser?.consume("definitely not consumed\n", indentation: 0) == false)
@@ -290,7 +290,7 @@ import Foundation
     }
 
     @Test func testParse_commentEndsByDeindentation() throws {
-        let tree = TendrilTree(content: "\t<comment>\n\t\tindented comment\n\t\tmore comment\nback to normal")
+        let tree = TendrilTree(content: "\t<comment>\n\t\tindented comment\n\t\tmore comment\n\tback to normal")
         try #require(tree.messages().count == 1)
         #expect(tree.messages().first?.content == "\tback to normal")
         #expect(tree.messages().first?.kind == .assistant)
