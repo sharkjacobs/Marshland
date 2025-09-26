@@ -60,6 +60,31 @@ import Foundation
         #expect(parser?.consume("def\n", indentation: 1) == true)
         #expect(parser?.content == "<abc>\ndef\n</abc>\n")
     }
+
+    @Test func testCommentParser() throws {
+        #expect(CommentParser("comment") == nil)
+        #expect(CommentParser("<comment>") == nil)
+        #expect(CommentParser("<comment>\n") != nil)
+        #expect(CommentParser("<comment>\n")?.content == "")
+    }
+
+    @Test func testCommentParser_consume() throws {
+        var parser = CommentParser("<comment>\n")
+        #expect(parser?.content == "")
+        #expect(parser?.consume("this is ignored\n", indentation: 1) == true)
+        #expect(parser?.content == "")
+        #expect(parser?.consume("more ignored content\n", indentation: 2) == true)
+        #expect(parser?.content == "")
+        #expect(parser?.consume("still ignored\n", indentation: 1) == true)
+        #expect(parser?.content == "")
+    }
+
+    @Test func testCommentParser_endsByDeindentation() throws {
+        var parser = CommentParser("<comment>\n", indentation: 1)
+        #expect(parser?.consume("ignored\n", indentation: 2) == true)
+        #expect(parser?.consume("not consumed\n", indentation: 1) == false)
+        #expect(parser?.consume("definitely not consumed\n", indentation: 0) == false)
+    }
 }
 
 @Suite final actor MessageParsingTests {
@@ -196,6 +221,85 @@ import Foundation
         let tree = TendrilTree(content: "<b>\n\t<i>\n\t\t<abc>\n\t\t\tcontent\ncontent")
         try #require(tree.messages().count == 1)
         #expect(tree.messages().first?.content == "<b>\n<i>\n<abc>\ncontent\n</abc>\n</i>\n</b>\ncontent")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    // MARK: - Comment Tag Tests
+
+    @Test func testParse_basicCommentTag() throws {
+        let tree = TendrilTree(content: "before\n<comment>\n\tthis is ignored\nafter")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "before\nafter")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_emptyCommentTag() throws {
+        let tree = TendrilTree(content: "before\n<comment>\nafter")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "before\nafter")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_multilineComment() throws {
+        let tree = TendrilTree(content: "content\n<comment>\n\tfirst line\n\tsecond line\n\tthird line\nmore content")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "content\nmore content")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_indentedCommentTag() throws {
+        let tree = TendrilTree(content: "<b>\n\tbold text\n\t<comment>\n\t\tthis comment is indented\n\t\tmultiple lines\n\tmore bold")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "<b>\nbold text\nmore bold\n</b>")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_commentWithXMLTags() throws {
+        let tree = TendrilTree(content: "text\n<comment>\n\t<b>\n\t\tbold in comment\n\t<i>italic too\nafter comment")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "text\nafter comment")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_commentWithUserTag() throws {
+        let tree = TendrilTree(content: "<user>\n\tuser content\n\t<comment>\n\t\t<user>\n\t\t\tfake user message\n\tmore user content")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "user content\nmore user content")
+        #expect(tree.messages().first?.kind == .user)
+    }
+
+    @Test func testParse_commentInUserMessage() throws {
+        let tree = TendrilTree(content: "<user>\n\thello\n\t<comment>\n\t\tthis explains hello\n\tworld")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "hello\nworld")
+        #expect(tree.messages().first?.kind == .user)
+    }
+
+    @Test func testParse_multipleComments() throws {
+        let tree = TendrilTree(content: "start\n<comment>\n\tfirst comment\nmiddle\n<comment>\n\tsecond comment\nend")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "start\nmiddle\nend")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_commentAtDifferentIndentations() throws {
+        let tree = TendrilTree(content: "<comment>\n\ttop level comment\n<b>\n\tbold\n\t<comment>\n\t\tnested comment\n\tmore bold\nplain text")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "<b>\nbold\nmore bold\n</b>\nplain text")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_commentEndsByDeindentation() throws {
+        let tree = TendrilTree(content: "\t<comment>\n\t\tindented comment\n\t\tmore comment\nback to normal")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "\tback to normal")
+        #expect(tree.messages().first?.kind == .assistant)
+    }
+
+    @Test func testParse_nestedComment() throws {
+        let tree = TendrilTree(content: "<comment>\n\tabc\n\t<comment>\n\t\tdef\n\tghi\njkl")
+        try #require(tree.messages().count == 1)
+        #expect(tree.messages().first?.content == "jkl")
         #expect(tree.messages().first?.kind == .assistant)
     }
 }
