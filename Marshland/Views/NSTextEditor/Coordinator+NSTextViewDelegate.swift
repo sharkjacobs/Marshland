@@ -19,9 +19,10 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textViewDidChangeSelection(_ notification: Notification) {
         guard let textView = notification.object as? NSTextView else { return }
         
-        DispatchQueue.main.async {
-            // TODO: don't scroll when llm inserts text
-            textView.scrollRangeToVisible(textView.selectedRange)
+        if !viewModel.isLLMResponding {
+            Task { @MainActor in
+                textView.scrollRangeToVisible(textView.selectedRange)
+            }
         }
     }
 
