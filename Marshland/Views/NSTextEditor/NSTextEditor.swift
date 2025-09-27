@@ -58,7 +58,11 @@ struct NSTextEditor: NSViewRepresentable {
         return scrollView
     }
 
-    func updateNSView(_ nsView: NSScrollView, context: Context) { }
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        let textView = nsView.documentView as! NSTextView
+        textView.isEditable = !viewModel.isLLMResponding
+        textView.isSelectable = !viewModel.isLLMResponding
+    }
 
     // MARK: - Coordinator
 
