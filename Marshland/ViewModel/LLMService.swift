@@ -89,6 +89,9 @@ private extension [Message] {
         var cacheCount = 0
         for message in self.reversed() {
             let content = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            if content.isEmpty {
+                continue
+            }
             switch message.kind {
             case .system:
                 systemPrompt = content
