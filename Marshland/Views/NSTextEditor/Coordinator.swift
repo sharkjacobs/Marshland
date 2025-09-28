@@ -51,7 +51,7 @@ extension NSTextEditor {
             }
         }
 
-        private func updateIndentationOfTypingAttributes(in textView: NSTextView) {
+        internal func updateIndentationOfTypingAttributes(in textView: NSTextView) {
             func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
                 let baseIndentation = 15
                 let indentSize = 20

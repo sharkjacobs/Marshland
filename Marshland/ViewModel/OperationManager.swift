@@ -220,7 +220,7 @@ class OperationManager {
     private func endUndoGroup() {
         undoManager?.endUndoGrouping()
 
-        if !changes.filter( { $0 == .typingAttributesNeedsUpdate }).isEmpty {
+        if !changes.isEmpty {
             onChange?(changes)
         } else {
             undoManager?.undo()
@@ -231,6 +231,10 @@ class OperationManager {
 
     private func emitChange(_ change: EditorChange) {
         if isUndoGrouping {
+            guard !(change == .typingAttributesNeedsUpdate && changes.contains(where: { $0 == .typingAttributesNeedsUpdate })) // this is an ugly way to do this
+            else {
+                return
+            }
             changes.append(change)
         } else {
             onChange?([change])
@@ -341,12 +345,12 @@ class OperationManager {
             }
             try? viewModel.indent(depth: actualDepth, at: location)
             emitChange(.paragraphInvalidated(location: location))
+            emitChange(.typingAttributesNeedsUpdate)
         case .moveSelection(from: let r1, to: let r2):
             undoManager?.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))
             }
             emitChange(.selectionMoved(from: r1, to: r2))
         }
-        emitChange(.typingAttributesNeedsUpdate)
     }
 }

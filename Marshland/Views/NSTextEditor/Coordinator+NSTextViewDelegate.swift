@@ -10,14 +10,12 @@ import AppKit
 extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textView(_ textView: NSTextView, willChangeSelectionFromCharacterRange oldSelectedCharRange: NSRange, toCharacterRange newSelectedCharRange: NSRange) -> NSRange {
         viewModel.selection = newSelectedCharRange
-        // I think we're getting flicker because we async update typingAttribute paragraph style
-        // through OperationManager... It might be better if we did it directly from here
         return newSelectedCharRange
     }
     
     func textViewDidChangeSelection(_ notification: Notification) {
         guard let textView = notification.object as? NSTextView else { return }
-        
+        updateIndentationOfTypingAttributes(in: textView)
         if !viewModel.isLLMResponding {
             Task { @MainActor in
                 textView.scrollRangeToVisible(textView.selectedRange)
