@@ -179,6 +179,26 @@ class OperationManager {
         
         return NSRange(location: startLocation, length: length + marker.utf16Length + 1)
     }
+    
+    /// If selection is in user message content it should be moved to the end of the current line
+    /// and two newlines should be inserted, before assistant response text begins to be inserted
+    func textMateCommandReturn(indent: Int?, insert str: String = "") {
+        guard let selection = viewModel?.selection,
+              let content = viewModel?.content
+        else {
+            return
+        }
+        var endOfLineIdx = content.lineRange(for: selection).upperBound
+        if content.character(at: endOfLineIdx - 1) == "\n".utf16.first! {
+            endOfLineIdx -= 1
+        }
+        beginUndoGroup()
+        process(operation: .moveSelection(from: selection, to: NSRange(location: endOfLineIdx, length: 0)))
+        process(operation: .insert(text: "\n", at: endOfLineIdx))
+        process(operation: .indentLocation(location: endOfLineIdx + 1, depth: indent ?? 0))
+        process(operation: .insert(text: str, at: endOfLineIdx + 1))
+        endUndoGroup()
+    }
 
     // MARK: - Private
     
@@ -273,6 +293,8 @@ class OperationManager {
     private func process(operation: Operation) {
         switch operation {
         case .insert(text: let text, at: let index):
+            guard !text.isEmpty else { return }
+            
             undoManager?.registerUndo(withTarget: self) { target in
                 let deletionRange = NSRange(location: index, length: text.utf16.count)
                 target.process(operation: .delete(range: deletionRange))
@@ -280,6 +302,8 @@ class OperationManager {
             try? viewModel?.insert(text: text, at: index)
             emitChange(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
+            
+            guard range.length != 0 else { return }
             let deletedText = viewModel?.content.substring(with: range) ?? ""
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .insert(text: deletedText, at: range.location))
@@ -287,6 +311,8 @@ class OperationManager {
             try? viewModel?.delete(range: range)
             emitChange(.textReplaced(range: range, replacement: ""))
         case .deletePreservingIndentation(range: let range):
+            guard range.length != 0 else { return }
+            
             let preservedIndentation = (try? viewModel?.indentation(at: range.upperBound)) ?? 0
             let change = preservedIndentation - ((try? viewModel?.indentation(at: range.location)) ?? 0)
             if change != 0 {
@@ -305,7 +331,6 @@ class OperationManager {
             }
         case .indentLocation(location: let location, depth: let depth):
             guard let viewModel else { return }
-            
             let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: location)) ?? 0))
             guard actualDepth != 0 else {
                 return
@@ -317,11 +342,10 @@ class OperationManager {
             try? viewModel.indent(depth: actualDepth, at: location)
             emitChange(.paragraphInvalidated(location: location))
         case .moveSelection(from: let r1, to: let r2):
-//            undoManager?.registerUndo(withTarget: self) { weakSelf in
-//                weakSelf.process(operation: .moveSelection(from: r2, to: r1))
-//            }
-            viewModel?.setSelection(r2)
-//            emitChange(.selectionMoved(from: r1, to: r2))
+            undoManager?.registerUndo(withTarget: self) { weakSelf in
+                weakSelf.process(operation: .moveSelection(from: r2, to: r1))
+            }
+            emitChange(.selectionMoved(from: r1, to: r2))
         }
         emitChange(.typingAttributesNeedsUpdate)
     }

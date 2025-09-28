@@ -9,8 +9,7 @@ import AppKit
 
 extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textView(_ textView: NSTextView, willChangeSelectionFromCharacterRange oldSelectedCharRange: NSRange, toCharacterRange newSelectedCharRange: NSRange) -> NSRange {
-        viewModel.operationManager?.moveSelection(from: oldSelectedCharRange, to: newSelectedCharRange)
-
+        viewModel.selection = newSelectedCharRange
         // I think we're getting flicker because we async update typingAttribute paragraph style
         // through OperationManager... It might be better if we did it directly from here
         return newSelectedCharRange

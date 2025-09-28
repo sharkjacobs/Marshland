@@ -55,10 +55,6 @@ class EditorViewModel {
         document.objectWillChange.send()
     }
 
-    func setSelection(_ range: NSRange) {
-        selection = range
-    }
-    
     func toggleSidebar() {
         if isSidebarVisible == false {
             reloadMessages()
@@ -68,21 +64,32 @@ class EditorViewModel {
     
     func llmRespond() {
         Task { @MainActor in
+            guard selection.length == 0 else { return }
             reloadMessages()
-            await llmService.respond(messages: messages) {
-                /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
-                // let response = NSMutableAttributedString(string: $0)
-                // let full = NSRange(location: 0, length: response.length)
-                // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
-                // response.addAttribute(.author,     value: authorName,            range: full)
-                self.insertText($0, at: self.selection)
+            
+            if messages.last?.kind == .user,
+               let indentation = (try? indentation(at: selection.location)),
+               indentation != 0 {
+                operationManager?.textMateCommandReturn(indent: -indentation, insert: "\n") 
             }
-            reloadMessages()
+//            await llmService.respond(messages: messages) {
+//                /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
+//                // let response = NSMutableAttributedString(string: $0)
+//                // let full = NSRange(location: 0, length: response.length)
+//                // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
+//                // response.addAttribute(.author,     value: authorName,            range: full)
+//                self.insertText($0, at: self.selection)
+//            }
+//            reloadMessages()
         }
     }
     
     func reloadMessages() {
-        messages = self.document.tree.messages()
+        if selection.length == 0 {
+            messages = self.document.tree.messages(range: NSRange(location: 0, length: selection.location))
+        } else {
+            messages = self.document.tree.messages(range: selection)
+        }
     }
 
     func indentation(at offset: Int) throws -> Int {
@@ -139,6 +146,12 @@ class EditorViewModel {
         // TODO: In future, replaceCharacters should generate appropriate moveSelection Operation
         // for consistency and proper undo coalescing behavior
     }
+    
+//    func setSelection(_ range: NSRange) {
+//        let oldSelection = selection
+//        selection = range
+//        operationManager?.moveSelection(from: oldSelection, to: range)
+//    }
     
     func copiedData(for range: NSRange) -> PasteboardChunk? {
         guard let baseIndentation = try? document.tree.indentation(at: range.location) else {

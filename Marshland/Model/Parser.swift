@@ -49,12 +49,13 @@ extension TendrilTree {
        - An empty message block (e.g., `<user>` followed immediately by another message tag) will produce a `Message` with empty content.
        - The default message kind for content not otherwise specified is `.assistant`.
      */
-    func messages() -> [Message] {
+    func messages(range: NSRange? = nil) -> [Message] {
         //        guard self.length > 0 else { return [] }
         var messages = [Message]()
         var parser: Parser?
 
-        for (content, _, indentation) in self.lines() {
+        let lines = range != nil ? self.lines(in: range!) : self.lines()
+        for (content, _, indentation) in lines {
             if parser != nil {
                 if !parser!.consume(content, indentation: indentation) {
                     if let parser, let message = Message(parser: parser) {
