@@ -70,17 +70,17 @@ class EditorViewModel {
             if messages.last?.kind == .user,
                let indentation = (try? indentation(at: selection.location)),
                indentation != 0 {
-                operationManager?.textMateCommandReturn(indent: -indentation, insert: "\n") 
+                operationManager?.textMateCommandReturn(indent: -indentation, insert: "\n")
             }
-//            await llmService.respond(messages: messages) {
+            await llmService.respond(messages: messages) {
 //                /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
 //                // let response = NSMutableAttributedString(string: $0)
 //                // let full = NSRange(location: 0, length: response.length)
 //                // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
 //                // response.addAttribute(.author,     value: authorName,            range: full)
-//                self.insertText($0, at: self.selection)
-//            }
-//            reloadMessages()
+                self.insertText($0, at: self.selection)
+            }
+            reloadMessages()
         }
     }
     
