@@ -182,7 +182,7 @@ class OperationManager {
     
     /// If selection is in user message content it should be moved to the end of the current line
     /// and two newlines should be inserted, before assistant response text begins to be inserted
-    func textMateCommandReturn(indent: Int?, insert str: String = "") {
+    func newRowCommand(indent: Int? = nil, insert str: String = "") {
         guard let selection = viewModel?.selection,
               let content = viewModel?.content
         else {

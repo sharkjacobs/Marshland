@@ -42,6 +42,10 @@ struct MarshlandApp: App {
                     self.viewModel?.operationManager?.tagCommand("comment")
                 }
                 .keyboardShortcut("/", modifiers: .command)
+                Button("New Row") {
+                    self.viewModel?.operationManager?.newRowCommand()
+                }
+                .keyboardShortcut(.return, modifiers: .command)
             }
             
             CommandGroup(replacing: CommandGroupPlacement.appInfo) {

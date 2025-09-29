@@ -70,7 +70,7 @@ class EditorViewModel {
             if messages.last?.kind == .user,
                let indentation = (try? indentation(at: selection.location)),
                indentation != 0 {
-                operationManager?.textMateCommandReturn(indent: -indentation, insert: "\n")
+                operationManager?.newRowCommand(indent: -indentation, insert: "\n")
             }
             await llmService.respond(messages: messages) {
 //                /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
