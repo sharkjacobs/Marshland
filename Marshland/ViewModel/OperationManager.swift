@@ -15,6 +15,7 @@ class OperationManager {
 
     private var isUndoGrouping: Bool = false
     private var changes: [EditorChange] = []
+    private let undoGroupingStateMachine = UndoGroupingStateMachine()
 
     init(viewModel: EditorViewModel) {
         self.viewModel = viewModel
@@ -40,10 +41,45 @@ class OperationManager {
     }
 
     public func replaceCharacters(in range: NSRange, with string: String) {
-        beginUndoGroup()
+        // Create a simple event for the state machine (will be refined in Stage 3.3)
+        let event: UndoGroupingEvent
+        if range.length == 0 && string.count == 1 && string.first != nil {
+            // Single character insertion (1 grapheme cluster, may be multiple UTF-16 code units for emojis)
+            event = .characterInsertion(at: range.location, char: string.first!)
+        } else if range.length == 0 && string == " " {
+            // Space insertion
+            event = .spaceInsertion(at: range.location)
+        } else if range.length == 0 && string == "\n" {
+            // Newline insertion
+            event = .newlineInsertion(at: range.location)
+        } else if range.length == 0 && string == "\t" {
+            // Tab insertion
+            event = .tabInsertion(at: range.location)
+        } else if range.length > 0 && string.isEmpty {
+            // Deletion
+            event = .deletion(range: range)
+        } else {
+            // Other operations (multi-character insertions, replacements)
+            event = .otherOperation
+        }
+
+        let decision = undoGroupingStateMachine.processEvent(event)
+        handleUndoGroupingDecision(decision)
+
         let operations = self.operationsForReplaceCharacters(in: range, with: string as NSString)
         process(operations: operations)
-        endUndoGroup()
+
+        // Only end the group based on state machine decision
+        switch decision {
+        case .endCurrentGroup:
+            if isUndoGrouping {
+                endUndoGroup()
+            }
+        case .continueCurrentGroup, .startNewGroup, .endCurrentGroupAndStartNew:
+            // Keep group open for continued typing
+            break
+        }
+
         viewModel?.documentChanged()
     }
     
@@ -260,6 +296,33 @@ class OperationManager {
         }
         changes = []
         isUndoGrouping = false
+    }
+
+    /// Handle undo grouping decision from state machine
+    private func handleUndoGroupingDecision(_ decision: UndoGroupingDecision) {
+        switch decision {
+        case .continueCurrentGroup:
+            // Do nothing - keep current group open
+            break
+
+        case .startNewGroup:
+            if isUndoGrouping {
+                endUndoGroup()
+            }
+            beginUndoGroup()
+
+        case .endCurrentGroup:
+            if isUndoGrouping {
+                endUndoGroup()
+            }
+            beginUndoGroup()
+
+        case .endCurrentGroupAndStartNew:
+            if isUndoGrouping {
+                endUndoGroup()
+            }
+            beginUndoGroup()
+        }
     }
 
     private func emitChange(_ change: EditorChange) {
