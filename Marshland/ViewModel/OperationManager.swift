@@ -65,6 +65,40 @@ class OperationManager {
 //        endUndoGroup()
     }
     
+    public func tagCommand() {
+        // lotta duplicate code here
+        // TODO: refactor this
+        // TODO: handle unTagging selection
+        if var selection = viewModel?.selection, let content = viewModel?.content {
+            // Compute start-of-line for the selection start
+            let startLoc = selection.location
+            var lineStart = startLoc
+            if startLoc > 0 {
+                var idx = startLoc - 1
+                while idx > 0 && content.character(at: idx) != "\n".utf16.first! {
+                    idx -= 1
+                }
+                lineStart = (content.character(at: idx) == "\n".utf16.first!) ? idx + 1 : idx
+            } else {
+                lineStart = 0
+            }
+
+            beginUndoGroup()
+            process(operation: .insert(text: "<>\n", at: lineStart))
+            selection.location += "<>\n".utf16Length
+            if selection.length > 0 {
+                process(operation: .indentRange(range: selection, depth: 1))
+            } else {
+                process(operation: .indentLocation(location: selection.location, depth: 1))
+            }
+            let newRange = NSRange(location: lineStart + 1, length: 0)
+            process(operation: .moveSelection(from: selection, to: newRange))
+            endUndoGroup()
+
+            viewModel?.documentChanged()
+        }
+    }
+    
     public func tagCommand(_ tag: String) {
         guard let selection = viewModel?.selection else { return }
         let marker = "<\(tag)>\n"
@@ -75,7 +109,6 @@ class OperationManager {
             let tagLength = marker.utf16.count
             let tagRange = NSRange(location: taggedRange.location, length: tagLength)
             process(operation: .deletePreservingIndentation(range: tagRange))
-//            process(operation: .moveSelection(from: selection, to: NSRange(location: taggedRange.location, length: taggedRange.length)))
             endUndoGroup()
             return
         }
