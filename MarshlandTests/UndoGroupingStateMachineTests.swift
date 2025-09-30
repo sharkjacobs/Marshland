@@ -35,7 +35,7 @@ struct UndoGroupingStateMachineTests {
         let stateMachine = UndoGroupingStateMachine()
         let decision = stateMachine.processEvent(.characterInsertion(at: 0, char: "h"))
         #expect(decision == .startNewGroup)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 1))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 1, sequence: "h"))
     }
 
     @Test("Sequential character insertion continues group")
@@ -44,7 +44,7 @@ struct UndoGroupingStateMachineTests {
         _ = stateMachine.processEvent(.characterInsertion(at: 0, char: "h"))
         let decision = stateMachine.processEvent(.characterInsertion(at: 1, char: "e"))
         #expect(decision == .continueCurrentGroup)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 2))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 2, sequence: "he"))
     }
 
     @Test("Sequential character insertion with emoji continues group")
@@ -53,7 +53,7 @@ struct UndoGroupingStateMachineTests {
         _ = stateMachine.processEvent(.characterInsertion(at: 0, char: "👋"))
         let decision = stateMachine.processEvent(.characterInsertion(at: 2, char: "h")) // emoji takes 2 UTF-16 code units
         #expect(decision == .continueCurrentGroup)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 3))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 3, sequence: "👋h"))
     }
 
     @Test("Non-sequential character insertion starts new group")
@@ -62,7 +62,7 @@ struct UndoGroupingStateMachineTests {
         _ = stateMachine.processEvent(.characterInsertion(at: 0, char: "h"))
         let decision = stateMachine.processEvent(.characterInsertion(at: 5, char: "e")) // gap in location
         #expect(decision == .startNewGroup)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 6))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 6, sequence: "e"))
     }
 
     // MARK: - Space Insertion Tests
@@ -73,7 +73,7 @@ struct UndoGroupingStateMachineTests {
         _ = stateMachine.processEvent(.characterInsertion(at: 0, char: "h"))
         let decision = stateMachine.processEvent(.spaceInsertion(at: 1))
         #expect(decision == .endCurrentGroupAndStartNew)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 2))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 2, sequence: " "))
     }
 
     @Test("Space insertion when idle starts new group")
@@ -81,7 +81,7 @@ struct UndoGroupingStateMachineTests {
         let stateMachine = UndoGroupingStateMachine()
         let decision = stateMachine.processEvent(.spaceInsertion(at: 0))
         #expect(decision == .startNewGroup)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 1))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 1, sequence: " "))
     }
     
     @Test("Non-sequential space insertion starts new group (not end+start)")
@@ -91,7 +91,7 @@ struct UndoGroupingStateMachineTests {
         // Space at non-sequential location should behave like non-sequential char insertion
         let decision = stateMachine.processEvent(.spaceInsertion(at: 5)) // gap in location
         #expect(decision == .startNewGroup)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 6))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 6, sequence: " "))
     }
     
     // MARK: - Newline/Tab Insertion Tests
@@ -178,7 +178,7 @@ struct UndoGroupingStateMachineTests {
         _ = stateMachine.processEvent(.spaceInsertion(at: 0))
         let decision = stateMachine.processEvent(.spaceInsertion(at: 1))
         #expect(decision == .continueCurrentGroup)
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 2))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 2, sequence: "  "))
     }
 
     // MARK: - Complex Scenarios
@@ -204,7 +204,7 @@ struct UndoGroupingStateMachineTests {
         #expect(stateMachine.processEvent(.characterInsertion(at: 9, char: "l")) == .continueCurrentGroup)
         #expect(stateMachine.processEvent(.characterInsertion(at: 10, char: "d")) == .continueCurrentGroup)
 
-        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 11))
+        #expect(stateMachine.currentState == .typingSequence(expectedLocation: 11, sequence: " world"))
     }
 
     @Test("Typing with newline breaks grouping")
