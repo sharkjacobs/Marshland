@@ -5,19 +5,18 @@
 //  Created by Graham Bing on 2025-09-03.
 //
 
-
 import Foundation
 
 class OperationManager {
     var undoManager: UndoManager?
     private weak var viewModel: EditorViewModel?
     var updateView: (([EditorChange]) -> Void)?
-    
+
     private func onChange(_ changes: [EditorChange]) {
         updateView?(changes)
         self.changes = []
     }
-    
+
     private var changes: [EditorChange] = []
     private let undoGroupingStateMachine = UndoGroupingStateMachine()
 
@@ -26,14 +25,14 @@ class OperationManager {
     }
 
     // MARK: - Public
-    
+
     public func indent(location: Int, depth: Int = 1) {
         undoManager?.beginUndoGrouping()
         process(operation: .indentLocation(location: location, depth: depth))
         onChange(changes)
-    undoManager?.endUndoGrouping()
+        undoManager?.endUndoGrouping()
     }
-    
+
     public func indent(_ range: NSRange, depth: Int = 1) {
         if range.length == 0 {
             self.indent(location: range.location, depth: depth)
@@ -41,7 +40,7 @@ class OperationManager {
             undoManager?.beginUndoGrouping()
             process(operation: .indentRange(range: range, depth: depth))
             onChange(changes)
-    undoManager?.endUndoGrouping()
+            undoManager?.endUndoGrouping()
         }
     }
 
@@ -71,7 +70,7 @@ class OperationManager {
         self.onChange(changes)
         viewModel?.documentChanged()
     }
-    
+
     public func paste(_ chunk: PasteboardChunk, in range: NSRange) {
         undoManager?.beginUndoGrouping()
         var operations = self.operationsForReplaceCharacters(in: range, with: chunk.content as NSString)
@@ -81,17 +80,17 @@ class OperationManager {
         }
         process(operations: operations)
         onChange(changes)
-    undoManager?.endUndoGrouping()
+        undoManager?.endUndoGrouping()
         viewModel?.documentChanged()
     }
-    
+
     public func moveSelection(from: NSRange, to: NSRange) {
         undoManager?.beginUndoGrouping()
         process(operation: .moveSelection(from: from, to: to))
         onChange(changes)
-    undoManager?.endUndoGrouping()
+        undoManager?.endUndoGrouping()
     }
-    
+
     public func tagCommand() {
         // lotta duplicate code here
         // TODO: refactor this
@@ -121,12 +120,12 @@ class OperationManager {
             let newRange = NSRange(location: lineStart + 1, length: 0)
             process(operation: .moveSelection(from: selection, to: newRange))
             onChange(changes)
-    undoManager?.endUndoGrouping()
+            undoManager?.endUndoGrouping()
 
             viewModel?.documentChanged()
         }
     }
-    
+
     public func tagCommand(_ tag: String) {
         guard let selection = viewModel?.selection else { return }
         let marker = "<\(tag)>\n"
@@ -138,10 +137,10 @@ class OperationManager {
             let tagRange = NSRange(location: taggedRange.location, length: tagLength)
             process(operation: .deletePreservingIndentation(range: tagRange))
             onChange(changes)
-    undoManager?.endUndoGrouping()
+            undoManager?.endUndoGrouping()
             return
         }
-        
+
         if var selection = viewModel?.selection, let content = viewModel?.content {
             // Compute start-of-line for the selection start
             let startLoc = selection.location
@@ -170,28 +169,29 @@ class OperationManager {
             //      will become "\t<tag>\n\t\tabc\n\tdef"
             //      but should be "<tag>\n\t\tabc\n\tdef"
             onChange(changes)
-    undoManager?.endUndoGrouping()
+            undoManager?.endUndoGrouping()
 
             viewModel?.documentChanged()
         }
     }
-    
+
     private func taggedRange(_ tag: String, at selection: NSRange) -> NSRange? {
         guard let content = viewModel?.content,
-              let baseIndentation = try? viewModel?.indentation(at: selection.location)
+            let baseIndentation = try? viewModel?.indentation(at: selection.location)
         else {
             // throw error?
             return nil
         }
         let marker = "<\(tag)>"
-        
+
         var startLocation: Int? = nil
-        
+
         // is <tag> part of the selection
         let lr = content.lineRange(for: selection)
         let len = marker.utf16Length
         if lr.location + len < content.length,
-           content.substring(with: NSRange(location: lr.location, length: len)) == marker {
+            content.substring(with: NSRange(location: lr.location, length: len)) == marker
+        {
             startLocation = lr.location
         }
 
@@ -217,11 +217,11 @@ class OperationManager {
                 }
             }
         }
-        
+
         guard let startLocation else {
             return nil
         }
-        
+
         var length: Int = 0
         let indentedContentLocation = startLocation + marker.utf16Length + 1
         content.enumerateSubstrings(
@@ -229,7 +229,8 @@ class OperationManager {
             options: .byLines
         ) { (_, _, enclosingRange, stop) in
             if let indentation = try? self.viewModel?.indentation(at: enclosingRange.location),
-            indentation > tagIndentation {
+                indentation > tagIndentation
+            {
                 length += enclosingRange.length
             } else {
                 stop.pointee = true
@@ -239,15 +240,15 @@ class OperationManager {
         guard length > 0 else {
             return nil
         }
-        
+
         return NSRange(location: startLocation, length: length + marker.utf16Length + 1)
     }
-    
+
     /// If selection is in user message content it should be moved to the end of the current line
     /// and two newlines should be inserted, before assistant response text begins to be inserted
     func newRowCommand(indent: Int? = nil, insert str: String = "") {
         guard let selection = viewModel?.selection,
-              let content = viewModel?.content
+            let content = viewModel?.content
         else {
             return
         }
@@ -261,11 +262,11 @@ class OperationManager {
         process(operation: .indentLocation(location: endOfLineIdx + 1, depth: indent ?? 0))
         process(operation: .insert(text: str, at: endOfLineIdx + 1))
         onChange(changes)
-    undoManager?.endUndoGrouping()
+        undoManager?.endUndoGrouping()
     }
 
     // MARK: - Private
-    
+
     private enum Operation {
         case insert(text: String, at: Int)
         case delete(range: NSRange)
@@ -274,7 +275,7 @@ class OperationManager {
         case indentRange(range: NSRange, depth: Int)
         case moveSelection(from: NSRange, to: NSRange)
     }
-    
+
     /// Handle undo grouping decision from state machine
     private func handleUndoGroupingDecision(_ decision: UndoGroupingDecision) {
         switch decision {
@@ -292,7 +293,7 @@ class OperationManager {
 
     private func operationsForReplaceCharacters(in range: NSRange, with string: NSString) -> [Operation] {
         var operations: [Operation] = []
-        
+
         operations += normalizeIndentationOperations(for: range)
 
         if range.length > 0 {
@@ -305,11 +306,11 @@ class OperationManager {
 
         return operations
     }
-    
+
     private func normalizeIndentationOperations(for range: NSRange) -> [Operation] {
         var operations: [Operation] = []
         guard let content = viewModel?.content,
-              let baseIndentation = try? viewModel?.indentation(at: range.location)
+            let baseIndentation = try? viewModel?.indentation(at: range.location)
         else {
             return operations
         }
@@ -323,7 +324,7 @@ class OperationManager {
                 }
             }
         }
-        
+
         if range.upperBound - 1 > 0, content.character(at: range.upperBound - 1) == "\n".utf16.first! {
             if let indentation = try? self.viewModel?.indentation(at: range.upperBound) {
                 let delta = baseIndentation - indentation
@@ -335,38 +336,38 @@ class OperationManager {
 
         return operations
     }
-    
+
     private func process(operations: [Operation]) {
         for operation in operations {
             process(operation: operation)
         }
     }
-    
+
     private func process(operation: Operation) {
         switch operation {
         case .insert(text: let text, at: let index):
             guard !text.isEmpty else { return }
-            
+
             undoManager?.registerUndo(withTarget: self) { target in
                 let deletionRange = NSRange(location: index, length: text.utf16.count)
                 target.process(operation: .delete(range: deletionRange))
-                self.onChange(self.changes) // TODO: collect these
+                self.onChange(self.changes)  // TODO: collect these
             }
             try? viewModel?.insert(text: text, at: index)
             changes.append(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
-            
+
             guard range.length != 0 else { return }
             let deletedText = viewModel?.content.substring(with: range) ?? ""
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .insert(text: deletedText, at: range.location))
-                self.onChange(self.changes) // TODO: collect these
+                self.onChange(self.changes)  // TODO: collect these
             }
             try? viewModel?.delete(range: range)
             changes.append(.textReplaced(range: range, replacement: ""))
         case .deletePreservingIndentation(range: let range):
             guard range.length != 0 else { return }
-            
+
             let preservedIndentation = (try? viewModel?.indentation(at: range.upperBound)) ?? 0
             let change = preservedIndentation - ((try? viewModel?.indentation(at: range.location)) ?? 0)
             if change != 0 {
@@ -375,7 +376,7 @@ class OperationManager {
             process(operation: .delete(range: range))
         case .indentRange(range: let range, depth: let depth):
             guard let content = viewModel?.content else { return }
-            
+
             content.enumerateSubstrings(in: range, options: .byLines) {
                 (_, range, _, _) in
                 let actualDepth = max(depth, -((try? self.viewModel?.indentation(at: range.location)) ?? 0))
@@ -389,10 +390,10 @@ class OperationManager {
             guard actualDepth != 0 else {
                 return
             }
-            
+
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .indentLocation(location: location, depth: -actualDepth))
-                self.onChange(self.changes) // TODO: collect these
+                self.onChange(self.changes)  // TODO: collect these
             }
             try? viewModel.indent(depth: actualDepth, at: location)
             changes.append(.paragraphInvalidated(location: location))
@@ -400,7 +401,7 @@ class OperationManager {
         case .moveSelection(from: let r1, to: let r2):
             undoManager?.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))
-                self.onChange(self.changes) // TODO: collect these
+                self.onChange(self.changes)  // TODO: collect these
             }
             changes.append(.selectionMoved(from: r1, to: r2))
         }
