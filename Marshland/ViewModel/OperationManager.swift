@@ -11,9 +11,13 @@ import Foundation
 class OperationManager {
     var undoManager: UndoManager?
     private weak var viewModel: EditorViewModel?
-    var onChange: (([EditorChange]) -> Void)?
-
-    private var isUndoGrouping: Bool = false
+    var updateView: (([EditorChange]) -> Void)?
+    
+    private func onChange(_ changes: [EditorChange]) {
+        updateView?(changes)
+        self.changes = []
+    }
+    
     private var changes: [EditorChange] = []
     private let undoGroupingStateMachine = UndoGroupingStateMachine()
 
@@ -24,40 +28,35 @@ class OperationManager {
     // MARK: - Public
     
     public func indent(location: Int, depth: Int = 1) {
-        beginUndoGroup()
+        undoManager?.beginUndoGrouping()
         process(operation: .indentLocation(location: location, depth: depth))
-        endUndoGroup()
+        onChange(changes)
+    undoManager?.endUndoGrouping()
     }
     
     public func indent(_ range: NSRange, depth: Int = 1) {
-        guard let content = viewModel?.content else { return }
         if range.length == 0 {
             self.indent(location: range.location, depth: depth)
         } else {
-            beginUndoGroup()
+            undoManager?.beginUndoGrouping()
             process(operation: .indentRange(range: range, depth: depth))
-            endUndoGroup()
+            onChange(changes)
+    undoManager?.endUndoGrouping()
         }
     }
 
     public func replaceCharacters(in range: NSRange, with string: String) {
         // Create a simple event for the state machine (will be refined in Stage 3.3)
         let event: UndoGroupingEvent
-        if range.length == 0 && string.count == 1 && string.first != nil {
-            // Single character insertion (1 grapheme cluster, may be multiple UTF-16 code units for emojis)
-            event = .characterInsertion(at: range.location, char: string.first!)
-        } else if range.length == 0 && string == " " {
+        if range.length == 0 && string == " " {
             // Space insertion
             event = .spaceInsertion(at: range.location)
         } else if range.length == 0 && string == "\n" {
             // Newline insertion
             event = .newlineInsertion(at: range.location)
-        } else if range.length == 0 && string == "\t" {
-            // Tab insertion
-            event = .tabInsertion(at: range.location)
-        } else if range.length > 0 && string.isEmpty {
-            // Deletion
-            event = .deletion(range: range)
+        } else if range.length == 0 && string.count == 1 && string.first != nil {
+            // Single character insertion (1 grapheme cluster, may be multiple UTF-16 code units for emojis)
+            event = .characterInsertion(at: range.location, char: string.first!)
         } else {
             // Other operations (multi-character insertions, replacements)
             event = .otherOperation
@@ -69,36 +68,28 @@ class OperationManager {
         let operations = self.operationsForReplaceCharacters(in: range, with: string as NSString)
         process(operations: operations)
 
-        // Only end the group based on state machine decision
-        switch decision {
-        case .endCurrentGroup:
-            if isUndoGrouping {
-                endUndoGroup()
-            }
-        case .continueCurrentGroup, .startNewGroup, .endCurrentGroupAndStartNew:
-            // Keep group open for continued typing
-            break
-        }
-
+        self.onChange(changes)
         viewModel?.documentChanged()
     }
     
     public func paste(_ chunk: PasteboardChunk, in range: NSRange) {
-        beginUndoGroup()
+        undoManager?.beginUndoGrouping()
         var operations = self.operationsForReplaceCharacters(in: range, with: chunk.content as NSString)
         for indent in chunk.indents {
             let adjustedLocation = indent.location + range.location
             operations.append(.indentLocation(location: adjustedLocation, depth: indent.depth))
         }
         process(operations: operations)
-        endUndoGroup()
+        onChange(changes)
+    undoManager?.endUndoGrouping()
         viewModel?.documentChanged()
     }
     
     public func moveSelection(from: NSRange, to: NSRange) {
-//        beginUndoGroup()
+        undoManager?.beginUndoGrouping()
         process(operation: .moveSelection(from: from, to: to))
-//        endUndoGroup()
+        onChange(changes)
+    undoManager?.endUndoGrouping()
     }
     
     public func tagCommand() {
@@ -119,7 +110,7 @@ class OperationManager {
                 lineStart = 0
             }
 
-            beginUndoGroup()
+            undoManager?.beginUndoGrouping()
             process(operation: .insert(text: "<>\n", at: lineStart))
             selection.location += "<>\n".utf16Length
             if selection.length > 0 {
@@ -129,7 +120,8 @@ class OperationManager {
             }
             let newRange = NSRange(location: lineStart + 1, length: 0)
             process(operation: .moveSelection(from: selection, to: newRange))
-            endUndoGroup()
+            onChange(changes)
+    undoManager?.endUndoGrouping()
 
             viewModel?.documentChanged()
         }
@@ -140,12 +132,13 @@ class OperationManager {
         let marker = "<\(tag)>\n"
 
         if let taggedRange = taggedRange(tag, at: selection) {
-            beginUndoGroup()
+            undoManager?.beginUndoGrouping()
             process(operation: .indentRange(range: taggedRange, depth: -1))
             let tagLength = marker.utf16.count
             let tagRange = NSRange(location: taggedRange.location, length: tagLength)
             process(operation: .deletePreservingIndentation(range: tagRange))
-            endUndoGroup()
+            onChange(changes)
+    undoManager?.endUndoGrouping()
             return
         }
         
@@ -163,7 +156,7 @@ class OperationManager {
                 lineStart = 0
             }
 
-            beginUndoGroup()
+            undoManager?.beginUndoGrouping()
             process(operation: .insert(text: marker, at: lineStart))
             selection.location += marker.utf16Length
             if selection.length > 0 {
@@ -176,7 +169,8 @@ class OperationManager {
             // e.g. "\tabc\ndef"
             //      will become "\t<tag>\n\t\tabc\n\tdef"
             //      but should be "<tag>\n\t\tabc\n\tdef"
-            endUndoGroup()
+            onChange(changes)
+    undoManager?.endUndoGrouping()
 
             viewModel?.documentChanged()
         }
@@ -261,12 +255,13 @@ class OperationManager {
         if content.character(at: endOfLineIdx - 1) == "\n".utf16.first! {
             endOfLineIdx -= 1
         }
-        beginUndoGroup()
+        undoManager?.beginUndoGrouping()
         process(operation: .moveSelection(from: selection, to: NSRange(location: endOfLineIdx, length: 0)))
         process(operation: .insert(text: "\n", at: endOfLineIdx))
         process(operation: .indentLocation(location: endOfLineIdx + 1, depth: indent ?? 0))
         process(operation: .insert(text: str, at: endOfLineIdx + 1))
-        endUndoGroup()
+        onChange(changes)
+    undoManager?.endUndoGrouping()
     }
 
     // MARK: - Private
@@ -280,63 +275,20 @@ class OperationManager {
         case moveSelection(from: NSRange, to: NSRange)
     }
     
-    private func beginUndoGroup() {
-        undoManager?.beginUndoGrouping()
-        isUndoGrouping = true
-        changes = []
-    }
-
-    private func endUndoGroup() {
-        undoManager?.endUndoGrouping()
-
-        if !changes.isEmpty {
-            onChange?(changes)
-        } else {
-            undoManager?.undo()
-        }
-        changes = []
-        isUndoGrouping = false
-    }
-
     /// Handle undo grouping decision from state machine
     private func handleUndoGroupingDecision(_ decision: UndoGroupingDecision) {
         switch decision {
         case .continueCurrentGroup:
-            // Do nothing - keep current group open
             break
-
         case .startNewGroup:
-            if isUndoGrouping {
-                endUndoGroup()
-            }
-            beginUndoGroup()
-
+            undoManager?.beginUndoGrouping()
         case .endCurrentGroup:
-            if isUndoGrouping {
-                endUndoGroup()
-            }
-            beginUndoGroup()
-
+            undoManager?.endUndoGrouping()
         case .endCurrentGroupAndStartNew:
-            if isUndoGrouping {
-                endUndoGroup()
-            }
-            beginUndoGroup()
+            undoManager?.endUndoGrouping()
+            undoManager?.beginUndoGrouping()
         }
     }
-
-    private func emitChange(_ change: EditorChange) {
-        if isUndoGrouping {
-            guard !(change == .typingAttributesNeedsUpdate && changes.contains(where: { $0 == .typingAttributesNeedsUpdate })) // this is an ugly way to do this
-            else {
-                return
-            }
-            changes.append(change)
-        } else {
-            onChange?([change])
-        }
-    }
-
 
     private func operationsForReplaceCharacters(in range: NSRange, with string: NSString) -> [Operation] {
         var operations: [Operation] = []
@@ -398,18 +350,20 @@ class OperationManager {
             undoManager?.registerUndo(withTarget: self) { target in
                 let deletionRange = NSRange(location: index, length: text.utf16.count)
                 target.process(operation: .delete(range: deletionRange))
+                self.onChange(self.changes) // TODO: collect these
             }
             try? viewModel?.insert(text: text, at: index)
-            emitChange(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
+            changes.append(.textReplaced(range: NSRange(location: index, length: 0), replacement: text))
         case .delete(range: let range):
             
             guard range.length != 0 else { return }
             let deletedText = viewModel?.content.substring(with: range) ?? ""
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .insert(text: deletedText, at: range.location))
+                self.onChange(self.changes) // TODO: collect these
             }
             try? viewModel?.delete(range: range)
-            emitChange(.textReplaced(range: range, replacement: ""))
+            changes.append(.textReplaced(range: range, replacement: ""))
         case .deletePreservingIndentation(range: let range):
             guard range.length != 0 else { return }
             
@@ -438,15 +392,17 @@ class OperationManager {
             
             undoManager?.registerUndo(withTarget: self) { target in
                 target.process(operation: .indentLocation(location: location, depth: -actualDepth))
+                self.onChange(self.changes) // TODO: collect these
             }
             try? viewModel.indent(depth: actualDepth, at: location)
-            emitChange(.paragraphInvalidated(location: location))
-            emitChange(.typingAttributesNeedsUpdate)
+            changes.append(.paragraphInvalidated(location: location))
+            changes.append(.typingAttributesNeedsUpdate)
         case .moveSelection(from: let r1, to: let r2):
             undoManager?.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.process(operation: .moveSelection(from: r2, to: r1))
+                self.onChange(self.changes) // TODO: collect these
             }
-            emitChange(.selectionMoved(from: r1, to: r2))
+            changes.append(.selectionMoved(from: r1, to: r2))
         }
     }
 }

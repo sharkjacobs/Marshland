@@ -14,6 +14,23 @@ class MarshlandTextView: NSTextView {
             coordinator.didAttachToWindow(textView: self)
         }
     }
+    
+    @IBAction func undo(_ sender: Any?) {
+        if let um = (delegate as? NSTextEditor.Coordinator)?
+            .viewModel.operationManager?.undoManager {
+            while um.groupingLevel > 0 { um.endUndoGrouping() }
+        }
+        window?.undoManager?.undo()
+    }
+
+    @IBAction func redo(_ sender: Any?) {
+        if let um = (delegate as? NSTextEditor.Coordinator)?
+            .viewModel.operationManager?.undoManager {
+            while um.groupingLevel > 0 { um.endUndoGrouping() }
+        }
+        window?.undoManager?.redo()
+    }
+    
     /// Overrides the default copy behavior triggered by ⌘C or the Edit > Copy menu item.
     /// This method is part of the NSResponder chain.
     override func copy(_ sender: Any?) {

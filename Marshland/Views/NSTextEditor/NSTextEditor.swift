@@ -35,7 +35,7 @@ struct NSTextEditor: NSViewRepresentable {
         textContentStorage?.delegate = context.coordinator
 
         // Batched onChange handler
-        viewModel.operationManager?.onChange = { [weak textView] changes in
+        viewModel.operationManager?.updateView = { [weak textView] changes in
             guard let textView = textView else { return }
             Task { @MainActor in
                 // TODO: Future optimization - coalesce adjacent textReplaced calls, merge overlapping paragraphsInvalidated ranges
