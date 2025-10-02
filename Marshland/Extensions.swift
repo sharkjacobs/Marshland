@@ -56,3 +56,17 @@ extension String {
         return self.replacingOccurrences(of: "\t", with: "\\t").replacingOccurrences(of: "\n", with: "\\n")
     }
 }
+
+extension UndoManager {
+    func beginNewUndoGroup() {
+        while groupingLevel > 0 {
+            endUndoGrouping()
+        }
+        beginUndoGrouping()
+    }
+    func safelyEndUndoGroup() {
+        while groupingLevel > 0 {
+            endUndoGrouping()
+        }
+    }
+}
