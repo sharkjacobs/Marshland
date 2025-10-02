@@ -96,17 +96,6 @@ extension NSTextEditor {
             updateIndentationOfTypingAttributes(in: textView)
         }
 
-        // MARK: - Paste handling
-
-        func applyIndentations(_ indents: [Indent]) {
-            // Apply indentation adjustments through OperationManager for consistent undo handling
-            for indent in indents {
-                if indent.depth != 0 {
-                    viewModel.operationManager?.indent(location: indent.location, depth: indent.depth)
-                }
-            }
-        }
-
         // MARK: - Collapse/expand
 
         func collapse(_ range: NSRange, in textView: NSTextView) {

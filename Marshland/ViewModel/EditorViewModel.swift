@@ -78,7 +78,7 @@ class EditorViewModel {
 //                // let full = NSRange(location: 0, length: response.length)
 //                // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
 //                // response.addAttribute(.author,     value: authorName,            range: full)
-                self.insertText($0, at: self.selection)
+                operationManager?.replaceCharacters(in: self.selection, with: $0)
             }
             reloadMessages()
         }
@@ -108,23 +108,15 @@ class EditorViewModel {
         }
     }
     
-    internal func tendrilTreeDelete(range: NSRange) throws {
-        try document.tree.delete(range: range)
-    }
-
-    internal func tendrilTreeInsert(content: String, at location: Int) throws {
-        try document.tree.insert(content: content, at: location)
-    }
-
     // MARK: - Domain-oriented edit methods
 
     func insert(text: String, at location: Int) throws {
-        try tendrilTreeInsert(content: text, at: location)
+        try document.tree.insert(content: text, at: location)
         wordCount = document.tree.count
     }
 
     func delete(range: NSRange) throws {
-        try tendrilTreeDelete(range: range)
+        try document.tree.delete(range: range)
         wordCount = document.tree.count
     }
 
@@ -135,23 +127,6 @@ class EditorViewModel {
             try document.tree.outdent(depth: depth, range: range)
         }
     }
-
-    /// - Update model
-    /// - Notify UI to update
-    /// - update cursor position for next insertion
-    /// - notify document, saved content is dirty
-    func insertText(_ text: String, at range: NSRange) {
-        operationManager?.replaceCharacters(in: range, with: text)
-        selection = NSRange(location: range.location + text.utf16.count, length: 0)
-        // TODO: In future, replaceCharacters should generate appropriate moveSelection Operation
-        // for consistency and proper undo coalescing behavior
-    }
-    
-//    func setSelection(_ range: NSRange) {
-//        let oldSelection = selection
-//        selection = range
-//        operationManager?.moveSelection(from: oldSelection, to: range)
-//    }
     
     func copiedData(for range: NSRange) -> PasteboardChunk? {
         guard let baseIndentation = try? document.tree.indentation(at: range.location) else {
