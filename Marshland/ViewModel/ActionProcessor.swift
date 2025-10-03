@@ -11,9 +11,9 @@ class ActionProcessor {
     var updateView: (([EditorChange]) -> Void)?
     var undoManager: UndoManager?
 
-    private weak var viewModel: EditorViewModel?
-    private var changes: [EditorChange] = []
-    private func onChange(_ changes: [EditorChange]) {
+    internal weak var viewModel: EditorViewModel?
+    internal var changes: [EditorChange] = []
+    internal func onChange(_ changes: [EditorChange]) {
         updateView?(changes)
         self.changes = []
     }
@@ -42,124 +42,7 @@ class ActionProcessor {
     }
 
     public func tagCommand(_ tag: String = "") {
-        guard let selection = viewModel?.selection else { return }
-        let marker = "<\(tag)>\n"
-
-        if let taggedRange = taggedRange(tag, at: selection) {
-            undoManager?.beginUndoGrouping()
-            perform(operation: .indentRange(range: taggedRange, depth: -1))
-            let tagRange = NSRange(location: taggedRange.location, length: marker.utf16.count)
-            perform(operation: .deletePreservingIndentation(range: tagRange))
-            onChange(changes)
-            undoManager?.endUndoGrouping()
-            return
-        }
-
-        if var selection = viewModel?.selection, let content = viewModel?.content {
-            // Compute start-of-line for the selection start
-            let startLoc = selection.location
-            var lineStart = startLoc
-            if startLoc > 0 {
-                var idx = startLoc - 1
-                while idx > 0 && content.character(at: idx) != "\n".utf16.first! {
-                    idx -= 1
-                }
-                lineStart = (content.character(at: idx) == "\n".utf16.first!) ? idx + 1 : idx
-            } else {
-                lineStart = 0
-            }
-
-            undoManager?.beginUndoGrouping()
-            perform(operation: .insert(text: marker, at: lineStart))
-            selection.location += marker.utf16Length
-            if selection.length > 0 {
-                perform(operation: .indentRange(range: selection, depth: 1))
-            } else {
-                perform(operation: .indentLocation(location: selection.location, depth: 1))
-            }
-            if tag.isEmpty {
-                let newRange = NSRange(location: lineStart + 1, length: 0)
-                perform(operation: .moveSelection(from: selection, to: newRange))
-            }
-            // this doesn't account for the possibility that the first line of a multiline selection
-            // might not be the baseIndentation.
-            // e.g. "\tabc\ndef"
-            //      will become "\t<tag>\n\t\tabc\n\tdef"
-            //      but should be "<tag>\n\t\tabc\n\tdef"
-            onChange(changes)
-            undoManager?.endUndoGrouping()
-
-            viewModel?.documentChanged()
-        }
-    }
-
-    private func taggedRange(_ tag: String, at selection: NSRange) -> NSRange? {
-        guard let content = viewModel?.content,
-            let baseIndentation = try? viewModel?.indentation(at: selection.location)
-        else {
-            // throw error?
-            return nil
-        }
-        let marker = "<\(tag)>"
-
-        var startLocation: Int? = nil
-
-        // is <tag> part of the selection
-        let lr = content.lineRange(for: selection)
-        let len = marker.utf16Length
-        if lr.location + len < content.length,
-            content.substring(with: NSRange(location: lr.location, length: len)) == marker
-        {
-            startLocation = lr.location
-        }
-
-        var tagIndentation: Int = baseIndentation
-        if startLocation == nil {
-            content.enumerateSubstrings(
-                in: NSRange(location: 0, length: viewModel?.selection.upperBound ?? 0),
-                options: [.byLines, .reverse]
-            ) { (subString, range, _, stop) in
-                if let indentation = try? self.viewModel?.indentation(at: range.location) {
-                    if indentation < tagIndentation {
-                        tagIndentation = indentation
-                        if subString == marker {
-                            startLocation = range.location
-                            stop.pointee = true
-                            return
-                        }
-                    }
-                    if indentation == 0 {
-                        stop.pointee = true
-                        return
-                    }
-                }
-            }
-        }
-
-        guard let startLocation else {
-            return nil
-        }
-
-        var length: Int = 0
-        let indentedContentLocation = startLocation + marker.utf16Length + 1
-        content.enumerateSubstrings(
-            in: NSRange(location: indentedContentLocation, length: content.length - indentedContentLocation),
-            options: .byLines
-        ) { (_, _, enclosingRange, stop) in
-            if let indentation = try? self.viewModel?.indentation(at: enclosingRange.location),
-                indentation > tagIndentation
-            {
-                length += enclosingRange.length
-            } else {
-                stop.pointee = true
-            }
-        }
-
-        guard length > 0 else {
-            return nil
-        }
-
-        return NSRange(location: startLocation, length: length + marker.utf16Length + 1)
+        process(.tag(tag: tag))
     }
 
     /// If selection is in user message content it should be moved to the end of the current line
@@ -170,7 +53,7 @@ class ActionProcessor {
 
     // MARK: - Private
 
-    private enum Edit {
+    internal enum Edit {
         case insert(text: String, at: Int)
         case delete(range: NSRange)
         case deletePreservingIndentation(range: NSRange)
@@ -255,7 +138,7 @@ class ActionProcessor {
         case indent(range: NSRange, depth: Int)
         case paste(chunk: PasteboardChunk, range: NSRange)
         case moveSelection(from: NSRange, to: NSRange)
-        case tag(range: NSRange, tag: String)
+        case tag(tag: String)
         case newRow(indent: Int?, insert: String)
     }
     
@@ -319,8 +202,8 @@ class ActionProcessor {
             }
         case .moveSelection(from: let from, to: let to):
             edits.append(.moveSelection(from: from, to: to))
-        case .tag(range: let range, tag: let tag):
-            print("hmm")
+        case .tag(tag: let tag):
+            edits += self.editsForTagAction(tag: tag, selection: viewModel.selection)
         case .newRow(indent: let indent, insert: let str):
             var endOfLineIdx = viewModel.content.lineRange(for: viewModel.selection).upperBound
             if viewModel.content.character(at: endOfLineIdx - 1) == "\n".utf16.first! {
@@ -361,12 +244,13 @@ class ActionProcessor {
             return .otherOperation
         case .paste(chunk: _, range: _):
             return .otherOperation
-        case .moveSelection(from: let from, to: let to):
+        case .moveSelection(from: _, to: _):
             return .otherOperation
-        case .tag(range: let range, tag: let tag):
+        case .tag(tag: _):
             return .otherOperation
         case .newRow(indent: _, insert: _):
             return .otherOperation
         }
     }
 }
+
