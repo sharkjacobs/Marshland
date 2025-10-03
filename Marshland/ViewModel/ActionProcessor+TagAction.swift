@@ -11,17 +11,17 @@ extension ActionProcessor {
     internal func editsForTagAction(tag: String, selection: NSRange) -> [Edit] {
         guard let viewModel else { return [] }
         var edits: [Edit] = []
-        
+
         let marker = "<\(tag)>\n"
         let content = viewModel.content
-        
+
         if let taggedRange = taggedRange(tag, at: selection) {
             edits.append(.indentRange(range: taggedRange, depth: -1))
             let tagRange = NSRange(location: taggedRange.location, length: marker.utf16.count)
             edits.append(.deletePreservingIndentation(range: tagRange))
             return edits
         }
-        
+
         // Compute start-of-line for the selection start
         let startLoc = selection.location
         var lineStart = startLoc
@@ -34,7 +34,7 @@ extension ActionProcessor {
         } else {
             lineStart = 0
         }
-        
+
         edits.append(.insert(text: marker, at: lineStart))
         let offsetSelection = NSRange(location: selection.location + marker.utf16.count, length: selection.length)
         if offsetSelection.length > 0 {
@@ -53,30 +53,30 @@ extension ActionProcessor {
             let newRange = NSRange(location: lineStart + 1, length: 0)
             edits.append(.moveSelection(from: offsetSelection, to: newRange))
         }
-        
+
         return edits
     }
-    
+
     private func taggedRange(_ tag: String, at selection: NSRange) -> NSRange? {
         guard let content = viewModel?.content,
-              let baseIndentation = try? viewModel?.indentation(at: selection.location)
+            let baseIndentation = try? viewModel?.indentation(at: selection.location)
         else {
             // throw error?
             return nil
         }
         let marker = "<\(tag)>"
-        
+
         var startLocation: Int? = nil
-        
+
         // is <tag> part of the selection
         let lr = content.lineRange(for: selection)
         let len = marker.utf16Length
         if lr.location + len < content.length,
-           content.substring(with: NSRange(location: lr.location, length: len)) == marker
+            content.substring(with: NSRange(location: lr.location, length: len)) == marker
         {
             startLocation = lr.location
         }
-        
+
         var tagIndentation: Int = baseIndentation
         if startLocation == nil {
             content.enumerateSubstrings(
@@ -99,11 +99,11 @@ extension ActionProcessor {
                 }
             }
         }
-        
+
         guard let startLocation else {
             return nil
         }
-        
+
         var length: Int = 0
         let indentedContentLocation = startLocation + marker.utf16Length + 1
         content.enumerateSubstrings(
@@ -111,18 +111,18 @@ extension ActionProcessor {
             options: .byLines
         ) { (_, _, enclosingRange, stop) in
             if let indentation = try? self.viewModel?.indentation(at: enclosingRange.location),
-               indentation > tagIndentation
+                indentation > tagIndentation
             {
                 length += enclosingRange.length
             } else {
                 stop.pointee = true
             }
         }
-        
+
         guard length > 0 else {
             return nil
         }
-        
+
         return NSRange(location: startLocation, length: length + marker.utf16Length + 1)
     }
 }

@@ -89,7 +89,7 @@ extension NSTextEditor {
 
         func didAttachToWindow(textView: NSTextView) {
             if let undoManager = textView.window?.undoManager {
-                viewModel.operationManager?.undoManager = undoManager
+                viewModel.actionProcessor?.undoManager = undoManager
             }
             // We just need to do this sometime after init
             // to correctly set typing attributes of a brand new empty textview

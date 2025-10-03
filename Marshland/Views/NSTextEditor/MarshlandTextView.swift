@@ -17,7 +17,7 @@ class MarshlandTextView: NSTextView {
     
     @IBAction func undo(_ sender: Any?) {
         if let um = (delegate as? NSTextEditor.Coordinator)?
-            .viewModel.operationManager?.undoManager {
+            .viewModel.actionProcessor?.undoManager {
             while um.groupingLevel > 0 { um.endUndoGrouping() }
         }
         window?.undoManager?.undo()
@@ -25,7 +25,7 @@ class MarshlandTextView: NSTextView {
 
     @IBAction func redo(_ sender: Any?) {
         if let um = (delegate as? NSTextEditor.Coordinator)?
-            .viewModel.operationManager?.undoManager {
+            .viewModel.actionProcessor?.undoManager {
             while um.groupingLevel > 0 { um.endUndoGrouping() }
         }
         window?.undoManager?.redo()
@@ -59,7 +59,7 @@ class MarshlandTextView: NSTextView {
             let coordinator = self.delegate as? NSTextEditor.Coordinator
         {
             let insertRange = selectedRange()
-            coordinator.viewModel.operationManager?.paste(chunk, in: insertRange)
+            coordinator.viewModel.actionProcessor?.process(.paste(chunk: chunk, range: insertRange))
         } else {
             super.paste(sender)
         }

@@ -26,10 +26,10 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         switch commandSelector {
         case #selector(NSResponder.insertTab(_:)):
-            viewModel.operationManager?.indent(textView.selectedRange())
+            viewModel.actionProcessor?.process(.indent(range: textView.selectedRange()))
             return true
         case #selector(NSResponder.insertBacktab(_:)):
-            viewModel.operationManager?.indent(textView.selectedRange(), depth: -1)
+            viewModel.actionProcessor?.process(.indent(range: textView.selectedRange(), depth: -1))
             return true
         default:
             return false
@@ -45,7 +45,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
 
         let sanitizedString = replacementString.replacingOccurrences(of: "\t", with: "")
 
-        viewModel.operationManager?.replaceCharacters(in: affectedCharRange, with: sanitizedString)
+        viewModel.actionProcessor?.process(.replaceCharacters(range: affectedCharRange, replacement: sanitizedString))
 
         return false
     }

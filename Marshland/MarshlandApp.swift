@@ -34,20 +34,20 @@ struct MarshlandApp: App {
                     print("TODO: collapse")
                 }
                 .keyboardShortcut("9", modifiers: .command)
-                Button("User") {
-                    self.viewModel?.operationManager?.tagCommand()
+                Button("Tag") {
+                    self.viewModel?.actionProcessor?.process(.tag())
                 }
                 .keyboardShortcut("t", modifiers: .command)
                 Button("User") {
-                    self.viewModel?.operationManager?.tagCommand("user")
+                    self.viewModel?.actionProcessor?.process(.tag(tag: "user"))
                 }
                 .keyboardShortcut("u", modifiers: .command)
                 Button("Comment") {
-                    self.viewModel?.operationManager?.tagCommand("comment")
+                    self.viewModel?.actionProcessor?.process(.tag(tag: "comment"))
                 }
                 .keyboardShortcut("/", modifiers: .command)
                 Button("New Row") {
-                    self.viewModel?.operationManager?.newRowCommand()
+                    self.viewModel?.actionProcessor?.process(.newRow())
                 }
                 .keyboardShortcut(.return, modifiers: .command)
             }
