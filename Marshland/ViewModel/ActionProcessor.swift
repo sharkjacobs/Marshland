@@ -9,24 +9,27 @@ import Foundation
 
 @MainActor
 class ActionProcessor {
-    var updateView: (([EditorChange]) -> Void)?
-    var undoManager: UndoManager?
+    var updateView: (([EditorChange]) -> Void)
+    var undoManager: UndoManager
 
     internal weak var viewModel: EditorViewModel?
     internal var changes: [EditorChange] = []
     private func onChange(_ changes: [EditorChange]) {
+        // TODO: Future optimization - coalesce adjacent textReplaced calls, merge overlapping paragraphsInvalidated ranges
         if !changes.isEmpty {
-            updateView?(changes)
+            updateView(changes)
             self.changes = []
         }
     }
     private let undoStateMachine = UndoGroupingStateMachine()
 
-    init(viewModel: EditorViewModel) {
+    init(viewModel: EditorViewModel,
+         updateView: @escaping (([EditorChange]) -> Void),
+         undoManager: UndoManager
+    ) {
         self.viewModel = viewModel
-        if let updateClosure = viewModel.updateView {
-            self.updateView = updateClosure
-        }
+        self.updateView = updateView
+        self.undoManager = undoManager
     }
 
     // MARK: - Actions
@@ -43,7 +46,7 @@ class ActionProcessor {
     public func process(_ action: Action) async {
         let shouldBeginNewGroup = undoStateMachine.processAction(action)
         if shouldBeginNewGroup {
-            undoManager?.beginNewUndoGroup()
+            undoManager.beginNewUndoGroup()
         }
 
         perform(edits: edits(for: action))
@@ -136,7 +139,7 @@ class ActionProcessor {
         case .insert(text: let text, at: let index):
             guard !text.isEmpty else { return }
 
-            undoManager?.registerUndo(withTarget: self) { target in
+            undoManager.registerUndo(withTarget: self) { target in
                 let deletionRange = NSRange(location: index, length: text.utf16.count)
                 target.perform(edit: .delete(range: deletionRange))
                 self.onChange(self.changes)  // TODO: collect these
@@ -147,7 +150,7 @@ class ActionProcessor {
 
             guard range.length != 0 else { return }
             let deletedText = viewModel?.content.substring(with: range) ?? ""
-            undoManager?.registerUndo(withTarget: self) { target in
+            undoManager.registerUndo(withTarget: self) { target in
                 target.perform(edit: .insert(text: deletedText, at: range.location))
                 self.onChange(self.changes)  // TODO: collect these
             }
@@ -179,7 +182,7 @@ class ActionProcessor {
                 return
             }
 
-            undoManager?.registerUndo(withTarget: self) { target in
+            undoManager.registerUndo(withTarget: self) { target in
                 target.perform(edit: .indentLocation(location: location, depth: -actualDepth))
                 self.onChange(self.changes)  // TODO: collect these
             }
@@ -187,7 +190,7 @@ class ActionProcessor {
             changes.append(.paragraphInvalidated(location: location))
             changes.append(.typingAttributesNeedsUpdate)
         case .moveSelection(from: let r1, to: let r2):
-            undoManager?.registerUndo(withTarget: self) { weakSelf in
+            undoManager.registerUndo(withTarget: self) { weakSelf in
                 weakSelf.perform(edit: .moveSelection(from: r2, to: r1))
                 self.onChange(self.changes)  // TODO: collect these
             }

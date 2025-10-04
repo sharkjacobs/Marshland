@@ -87,15 +87,35 @@ extension NSTextEditor {
             textView.scrollViewDidResize(scrollView)
         }
 
-        @MainActor func didAttachToWindow(textView: NSTextView) {
-            if let undoManager = textView.window?.undoManager {
-                viewModel.actionProcessor?.undoManager = undoManager
+        @MainActor
+        func didAttachToWindow(textView: NSTextView) {
+            guard let undoManager = textView.window?.undoManager else { return }
+
+            let updateView: (([EditorChange]) -> Void) = { [weak textView] changes in
+                guard let textView = textView else { return }
+                for change in changes {
+                    self.processEditorChange(change, in: textView)
+                }
             }
-            // We just need to do this sometime after init
-            // to correctly set typing attributes of a brand new empty textview
+            
+            if viewModel.actionProcessor == nil {
+                viewModel.actionProcessor = ActionProcessor(
+                    viewModel: viewModel,
+                    updateView: updateView,
+                    undoManager: undoManager,
+                )
+            } else {
+                fatalError("I don't think I'll ever reach this")
+//                viewModel.actionProcessor?.attach(
+//                    undoManager: undoManager,
+//                    updateView: updateView
+//                )
+            }
+
+            // Existing behavior
             updateIndentationOfTypingAttributes(in: textView)
         }
-
+        
         // MARK: - Collapse/expand
 
         func collapse(_ range: NSRange, in textView: NSTextView) {

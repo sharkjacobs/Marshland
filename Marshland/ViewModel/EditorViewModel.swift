@@ -12,7 +12,6 @@ class EditorViewModel {
     private var document: MarshlandDocument
     private let llmService: LLMService
     var actionProcessor: ActionProcessor?
-    var updateView: (([EditorChange]) -> Void)?
 
     var isSidebarVisible: Bool = false
     var messages = [Message]()
@@ -48,9 +47,6 @@ class EditorViewModel {
         self.document = document
         self.llmService = llmService
 
-        Task { @MainActor in
-            self.actionProcessor = await ActionProcessor(viewModel: self)
-        }
         wordCount = document.tree.count
     }
 

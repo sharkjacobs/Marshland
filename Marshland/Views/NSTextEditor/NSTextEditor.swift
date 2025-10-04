@@ -34,15 +34,6 @@ struct NSTextEditor: NSViewRepresentable {
         let textContentStorage = layoutManager?.textContentManager as? NSTextContentStorage
         textContentStorage?.delegate = context.coordinator
 
-        // Batched onChange handler
-        viewModel.updateView = { [weak textView] changes in
-            guard let textView = textView else { return }
-            // TODO: Future optimization - coalesce adjacent textReplaced calls, merge overlapping paragraphsInvalidated ranges
-            for change in changes {
-                context.coordinator.processEditorChange(change, in: textView)
-            }
-        }
-
         textView.string = viewModel.content as String
         
         scrollView.postsFrameChangedNotifications = true
