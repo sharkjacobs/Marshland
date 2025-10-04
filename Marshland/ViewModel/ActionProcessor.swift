@@ -7,20 +7,26 @@
 
 import Foundation
 
+@MainActor
 class ActionProcessor {
     var updateView: (([EditorChange]) -> Void)?
     var undoManager: UndoManager?
 
     internal weak var viewModel: EditorViewModel?
     internal var changes: [EditorChange] = []
-    internal func onChange(_ changes: [EditorChange]) {
-        updateView?(changes)
-        self.changes = []
+    private func onChange(_ changes: [EditorChange]) {
+        if !changes.isEmpty {
+            updateView?(changes)
+            self.changes = []
+        }
     }
     private let undoStateMachine = UndoGroupingStateMachine()
 
     init(viewModel: EditorViewModel) {
         self.viewModel = viewModel
+        if let updateClosure = viewModel.updateView {
+            self.updateView = updateClosure
+        }
     }
 
     // MARK: - Actions
@@ -34,7 +40,7 @@ class ActionProcessor {
         case newRow(indent: Int? = nil, insert: String = "")
     }
 
-    public func process(_ action: Action) {
+    public func process(_ action: Action) async {
         let shouldBeginNewGroup = undoStateMachine.processAction(action)
         if shouldBeginNewGroup {
             undoManager?.beginNewUndoGroup()

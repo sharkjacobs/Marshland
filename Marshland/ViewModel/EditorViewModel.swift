@@ -12,6 +12,7 @@ class EditorViewModel {
     private var document: MarshlandDocument
     private let llmService: LLMService
     var actionProcessor: ActionProcessor?
+    var updateView: (([EditorChange]) -> Void)?
 
     var isSidebarVisible: Bool = false
     var messages = [Message]()
@@ -47,7 +48,9 @@ class EditorViewModel {
         self.document = document
         self.llmService = llmService
 
-        self.actionProcessor = ActionProcessor(viewModel: self)
+        Task { @MainActor in
+            self.actionProcessor = await ActionProcessor(viewModel: self)
+        }
         wordCount = document.tree.count
     }
 
@@ -70,15 +73,10 @@ class EditorViewModel {
             if messages.last?.kind == .user,
                let indentation = (try? indentation(at: selection.location)),
                indentation != 0 {
-                actionProcessor?.process(.newRow(indent: -indentation, insert: "\n"))
+                await actionProcessor?.process(.newRow(indent: -indentation, insert: "\n"))
             }
             await llmService.respond(messages: messages) {
-//                /// Insert an AI‐authored chunk at the cursor, tagged with the `.ai` author.
-//                // let response = NSMutableAttributedString(string: $0)
-//                // let full = NSRange(location: 0, length: response.length)
-//                // response.addAttribute(.authorType, value: AuthorType.ai.rawValue, range: full)
-//                // response.addAttribute(.author,     value: authorName,            range: full)
-                actionProcessor?.process(.replaceCharacters(range: self.selection, replacement: $0))
+                await actionProcessor?.process(.replaceCharacters(range: selection, replacement: $0))
             }
             reloadMessages()
         }

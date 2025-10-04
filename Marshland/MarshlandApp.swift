@@ -35,19 +35,27 @@ struct MarshlandApp: App {
                 }
                 .keyboardShortcut("9", modifiers: .command)
                 Button("Tag") {
-                    self.viewModel?.actionProcessor?.process(.tag())
+                    Task { @MainActor in
+                        await self.viewModel?.actionProcessor?.process(.tag())
+                    }
                 }
                 .keyboardShortcut("t", modifiers: .command)
                 Button("User") {
-                    self.viewModel?.actionProcessor?.process(.tag(tag: "user"))
+                    Task { @MainActor in
+                        await self.viewModel?.actionProcessor?.process(.tag(tag: "user"))
+                    }
                 }
                 .keyboardShortcut("u", modifiers: .command)
                 Button("Comment") {
-                    self.viewModel?.actionProcessor?.process(.tag(tag: "comment"))
+                    Task { @MainActor in
+                        await self.viewModel?.actionProcessor?.process(.tag(tag: "comment"))
+                    }
                 }
                 .keyboardShortcut("/", modifiers: .command)
                 Button("New Row") {
-                    self.viewModel?.actionProcessor?.process(.newRow())
+                    Task { @MainActor in
+                        await self.viewModel?.actionProcessor?.process(.newRow())
+                    }
                 }
                 .keyboardShortcut(.return, modifiers: .command)
             }

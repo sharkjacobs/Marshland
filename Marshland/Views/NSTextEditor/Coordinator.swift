@@ -87,7 +87,7 @@ extension NSTextEditor {
             textView.scrollViewDidResize(scrollView)
         }
 
-        func didAttachToWindow(textView: NSTextView) {
+        @MainActor func didAttachToWindow(textView: NSTextView) {
             if let undoManager = textView.window?.undoManager {
                 viewModel.actionProcessor?.undoManager = undoManager
             }

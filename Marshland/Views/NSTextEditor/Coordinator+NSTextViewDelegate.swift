@@ -18,18 +18,25 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         updateIndentationOfTypingAttributes(in: textView)
         if !viewModel.isLLMResponding {
             Task { @MainActor in
+                await Task.yield() // defer one turn of the runloop to let layout settle
+                                   // Is this necessary?
                 textView.scrollRangeToVisible(textView.selectedRange)
             }
         }
     }
 
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        let selection = textView.selectedRange()
         switch commandSelector {
         case #selector(NSResponder.insertTab(_:)):
-            viewModel.actionProcessor?.process(.indent(range: textView.selectedRange()))
+            Task { @MainActor in
+                await viewModel.actionProcessor?.process(.indent(range: selection))
+            }
             return true
         case #selector(NSResponder.insertBacktab(_:)):
-            viewModel.actionProcessor?.process(.indent(range: textView.selectedRange(), depth: -1))
+            Task { @MainActor in
+                await viewModel.actionProcessor?.process(.indent(range: selection, depth: -1))
+            }
             return true
         default:
             return false
@@ -45,7 +52,9 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
 
         let sanitizedString = replacementString.replacingOccurrences(of: "\t", with: "")
 
-        viewModel.actionProcessor?.process(.replaceCharacters(range: affectedCharRange, replacement: sanitizedString))
+        Task { @MainActor in
+            await viewModel.actionProcessor?.process(.replaceCharacters(range: affectedCharRange, replacement: sanitizedString))
+        }
 
         return false
     }

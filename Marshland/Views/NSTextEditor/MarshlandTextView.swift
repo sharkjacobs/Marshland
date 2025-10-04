@@ -59,7 +59,9 @@ class MarshlandTextView: NSTextView {
             let coordinator = self.delegate as? NSTextEditor.Coordinator
         {
             let insertRange = selectedRange()
-            coordinator.viewModel.actionProcessor?.process(.paste(chunk: chunk, range: insertRange))
+            Task { @MainActor in
+                await coordinator.viewModel.actionProcessor?.process(.paste(chunk: chunk, range: insertRange))
+            }
         } else {
             super.paste(sender)
         }

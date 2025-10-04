@@ -37,7 +37,7 @@ final class LLMService: Sendable {
         }
     }
 
-    func respond(messages: [Message], completion: (String) -> Void) async {
+    func respond(messages: [Message], onChunk: @Sendable (String) async -> Void) async {
         guard
             let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey"),
             !isResponding
@@ -59,7 +59,7 @@ final class LLMService: Sendable {
             let stream = try await service.streamMessage(parameters)
             for try await result in stream {
                 if let content = result.delta?.text {
-                    completion(content)
+                    await onChunk(content)
                 }
                 
                 if let createdCacheTokens = result.message?.usage.cacheCreationInputTokens {
