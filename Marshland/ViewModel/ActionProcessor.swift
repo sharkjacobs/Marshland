@@ -197,43 +197,7 @@ class ActionProcessor {
             changes.append(.selectionMoved(from: r1, to: r2))
         }
     }
-
-    private func undoEvent(for action: Action) -> UndoGroupingEvent {
-        switch action {
-        case .replaceCharacters(range: let range, replacement: let string):
-            if range.length > 0 {
-                if string.isEmpty {
-                    return .deletion(range: range)
-                } else {
-                    // TODO: .replacement(char:) and .replacement(str:)
-                    return .otherOperation
-                }
-            }
-            if string == " " {
-                return .spaceInsertion(at: range.location)
-            }
-            if string == "\n" {
-                return .newlineInsertion(at: range.location)
-            }
-            if string.count == 1, string.first != nil {
-                return .characterInsertion(at: range.location, char: string.first!)
-            }
-            // TODO: .stringInsertion
-            return .otherOperation
-        case .indent(range: _, depth: _):
-            return .otherOperation
-        case .paste(chunk: _, range: _):
-            return .otherOperation
-        case .moveSelection(from: _, to: _):
-            return .otherOperation
-        case .tag(tag: _):
-            return .otherOperation
-        case .newRow(indent: _, insert: _):
-            return .otherOperation
-        }
-    }
 }
-
 
 extension UndoGroupingStateMachine {
     /// Translates between ActionProcessor Actions and UndoGroupingStateMachine UndoGroupingEvents
