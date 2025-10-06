@@ -8,7 +8,6 @@
 import AppKit
 import SwiftUI
 import TendrilTree
-import STTextKitPlus
 
 struct NSTextEditor: NSViewRepresentable {
     var viewModel: EditorViewModel

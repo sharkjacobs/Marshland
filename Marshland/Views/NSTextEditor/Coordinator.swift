@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import STTextKitPlus
 
 extension NSTextEditor {
     class Coordinator: NSObject {
