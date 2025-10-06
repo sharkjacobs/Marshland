@@ -52,6 +52,7 @@ class EditorViewModel {
 
     func documentChanged() {
         document.objectWillChange.send()
+        wordCount = document.tree.count
     }
 
     func toggleSidebar() {
@@ -106,12 +107,10 @@ class EditorViewModel {
 
     func insert(text: String, at location: Int) throws {
         try document.tree.insert(content: text, at: location)
-        wordCount = document.tree.count
     }
 
     func delete(range: NSRange) throws {
         try document.tree.delete(range: range)
-        wordCount = document.tree.count
     }
 
     func indent(range: NSRange, depth: Int) throws {
