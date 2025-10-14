@@ -122,6 +122,7 @@ private extension [Message] {
             case "claude-3-haiku": return .claude3Haiku
             case "claude-3-5-haiku": return .claude35Haiku
             case "claude-4-sonnet": return .other("claude-sonnet-4-0")
+            case "claude-4-5-sonnet": return .other("claude-sonnet-4-5")
             case "claude-4-opus": return .other("claude-opus-4-0")
             default: return .claude37Sonnet
             }

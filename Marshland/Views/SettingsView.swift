@@ -49,6 +49,7 @@ struct SettingsView: View {
                             Text("claude-4-sonnet").tag("claude-4-sonnet")
                             Text("claude-3-opus").tag("claude-3-opus")
                             Text("claude-4-opus").tag("claude-4-opus")
+                            Text("claude-4-5-sonnet").tag("claude-4-5-sonnet")
                         }
                     }
                     Spacer()
