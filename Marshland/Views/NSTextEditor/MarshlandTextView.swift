@@ -7,11 +7,21 @@
 
 import AppKit
 
-class MarshlandTextView: NSTextView {
+class MarshlandTextView: NSTextView, NSTextFinderClient {
+    private var textFinder: NSTextFinder?
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if let coordinator = self.delegate as? NSTextEditor.Coordinator {
             coordinator.didAttachToWindow(textView: self)
+        }
+        // Configure the standard Cocoa find bar
+        if textFinder == nil, let scrollView = self.enclosingScrollView {
+            let finder = NSTextFinder()
+            finder.client = self
+            finder.findBarContainer = scrollView
+            finder.isIncrementalSearchingEnabled = true
+            self.textFinder = finder
         }
     }
     
@@ -80,6 +90,37 @@ class MarshlandTextView: NSTextView {
         return super.validateMenuItem(menuItem)
     }
 
+    // MARK: - Find Bar (NSTextFinder)
+    @IBAction override func performTextFinderAction(_ sender: Any?) {
+        guard let textFinder = self.textFinder else { return }
+
+        // If coming from the standard Find menu, AppKit sets the NSMenuItem's tag to NSFindPanelAction.
+//        if let menuItem = sender as? NSMenuItem, let action = NSFindPanelAction(rawValue: UInt(menuItem.tag)) {
+//            switch action {
+//            case .showFindPanel:
+//                textFinder.performAction(.showFindInterface)
+//            case .next:
+//                textFinder.performAction(.nextMatch)
+//            case .previous:
+//                textFinder.performAction(.previousMatch)
+//            case .setFindString:
+//                textFinder.performAction(.setSearchString)
+//            case .replaceAll:
+//                textFinder.performAction(.replaceAll)
+//            case .replace:
+//                textFinder.performAction(.replace)
+//            case .replaceAndFind:
+//                textFinder.performAction(.replaceAndFind)
+//            default:
+//                break
+//            }
+//            return
+//        }
+
+        // Fallback: if invoked without a tagged menu item, just show the find bar.
+        textFinder.performAction(.showFindInterface)
+    }
+    
     // MARK: - Overscrolling
     
     func scrollViewDidResize(_ scrollView: NSScrollView) {

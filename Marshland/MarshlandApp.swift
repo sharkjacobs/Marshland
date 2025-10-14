@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 @main
 struct MarshlandApp: App {
@@ -72,6 +73,15 @@ struct MarshlandApp: App {
                 .keyboardShortcut(.upArrow, modifiers: .option)
             }
             
+            CommandGroup(after: .textEditing) {
+                Button("Find…") {
+                    NSApp.sendAction(#selector(NSResponder.performTextFinderAction(_:)),
+                                     to: nil,
+                                     from: nil)
+                }
+                .keyboardShortcut("f", modifiers: .command)
+            }
+                        
             CommandGroup(replacing: CommandGroupPlacement.appInfo) {
                 Button {
                     openWindow(id: "about")
