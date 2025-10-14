@@ -75,6 +75,9 @@ class EditorViewModel {
             await llmService.respond(messages: messages) {
                 await actionProcessor?.process(.replaceCharacters(range: selection, replacement: $0))
             }
+            llmService.isResponding = true
+            await actionProcessor?.process(.replaceCharacters(range: selection, replacement: "\n"))
+            llmService.isResponding = false
             reloadMessages()
         }
     }
