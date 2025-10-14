@@ -14,6 +14,11 @@ extension NSTextEditor {
         private var indentationDepth: Int?
         private var typingAttributesParagraphStyle: NSParagraphStyle?
 
+        init(viewModel: EditorViewModel) {
+            self.viewModel = viewModel
+            super.init()
+        }
+
         /// Invalidates layout for the specified paragraph using TextKit 2 editing transactions
         private func invalidateParagraphLayout(for location: Int, in textView: NSTextView) {
             guard let layoutManager = textView.textContainer?.textLayoutManager,
@@ -53,17 +58,6 @@ extension NSTextEditor {
         }
 
         internal func updateIndentationOfTypingAttributes(in textView: NSTextView) {
-            func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
-                let baseIndentation = 15
-                let indentSize = 20
-                let indent = CGFloat(baseIndentation + indentSize * indentation)
-
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.firstLineHeadIndent = indent
-                paragraphStyle.headIndent = indent
-                return paragraphStyle
-            }
-
             if let indentation = try? viewModel.indentation(at: textView.selectedRange().location),
                 indentation != indentationDepth
             {
@@ -72,10 +66,16 @@ extension NSTextEditor {
             }
             textView.typingAttributes[.paragraphStyle] = typingAttributesParagraphStyle
         }
+        
+        internal func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
+            let baseIndentation = 0
+            let indentSize = 20
+            let indent = CGFloat(baseIndentation + indentSize * indentation)
 
-        init(viewModel: EditorViewModel) {
-            self.viewModel = viewModel
-            super.init()
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.firstLineHeadIndent = indent
+            paragraphStyle.headIndent = indent
+            return paragraphStyle
         }
 
         @objc func scrollViewFrameDidChange(_ notification: Notification) {

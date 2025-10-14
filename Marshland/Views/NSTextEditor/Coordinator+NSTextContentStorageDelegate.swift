@@ -11,17 +11,6 @@ extension NSTextEditor.Coordinator : NSTextContentStorageDelegate {
     func textContentStorage(_ textContentStorage: NSTextContentStorage, textParagraphWith range: NSRange) -> NSTextParagraph? {
         let originalText = textContentStorage.textStorage!.attributedSubstring(from: range)
 
-        func paragraphStyle(indentation: Int = 0) -> NSParagraphStyle {
-            let baseIndentation = 15
-            let indentSize = 20
-            let indent = CGFloat(baseIndentation + indentSize * indentation)
-
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.firstLineHeadIndent = indent
-            paragraphStyle.headIndent = indent
-            return paragraphStyle
-        }
-
         let displayAttributes: [NSAttributedString.Key: AnyObject] = [
             .font: NSFont.systemFont(ofSize: 14),
             .foregroundColor: NSColor.labelColor,
