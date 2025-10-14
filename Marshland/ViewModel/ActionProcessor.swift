@@ -129,10 +129,15 @@ class ActionProcessor {
         case .moveSelectionToNextUserTag:
             if let userRange = nextUserTag(from: viewModel.selection) {
                 edits.append(.moveSelection(from: viewModel.selection, to: userRange, registerUndo: false))
+            } else {
+                let range = NSRange(location: viewModel.content.length, length: 0)
+                edits.append(.moveSelection(from: viewModel.selection, to: range, registerUndo: false))
             }
         case .moveSelectionToPrevUserTag:
             if let userRange = prevUserTag(from: viewModel.selection) {
                 edits.append(.moveSelection(from: viewModel.selection, to: userRange, registerUndo: false))
+            } else {
+                edits.append(.moveSelection(from: viewModel.selection, to: NSRange(location: 0, length: 0), registerUndo: false))
             }
         }
 
