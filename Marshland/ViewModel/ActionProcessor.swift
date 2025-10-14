@@ -23,9 +23,10 @@ class ActionProcessor {
     }
     private let undoStateMachine = UndoGroupingStateMachine()
 
-    init(viewModel: EditorViewModel,
-         updateView: @escaping (([EditorChange]) -> Void),
-         undoManager: UndoManager
+    init(
+        viewModel: EditorViewModel,
+        updateView: @escaping (([EditorChange]) -> Void),
+        undoManager: UndoManager
     ) {
         self.viewModel = viewModel
         self.updateView = updateView
@@ -38,9 +39,11 @@ class ActionProcessor {
         case replaceCharacters(range: NSRange, replacement: String)
         case indent(range: NSRange, depth: Int = 1)
         case paste(chunk: PasteboardChunk, range: NSRange)
-        case moveSelection(from: NSRange, to: NSRange)
+        case moveSelection(from: NSRange, to: NSRange, registerUndo: Bool = true)
         case tag(tag: String = "")
         case newRow(indent: Int? = nil, insert: String = "")
+        case moveSelectionToNextUserTag
+        case moveSelectionToPrevUserTag
     }
 
     public func process(_ action: Action) async {
@@ -63,7 +66,7 @@ class ActionProcessor {
         case deletePreservingIndentation(range: NSRange)
         case indentLocation(location: Int, depth: Int)
         case indentRange(range: NSRange, depth: Int)
-        case moveSelection(from: NSRange, to: NSRange)
+        case moveSelection(from: NSRange, to: NSRange, registerUndo: Bool)
     }
 
     private func edits(for action: Action) -> [Edit] {
@@ -110,8 +113,8 @@ class ActionProcessor {
                 let adjustedLocation = indent.location + range.location
                 edits.append(.indentLocation(location: adjustedLocation, depth: indent.depth))
             }
-        case .moveSelection(from: let from, to: let to):
-            edits.append(.moveSelection(from: from, to: to))
+        case .moveSelection(from: let from, to: let to, registerUndo: let registerUndo):
+            edits.append(.moveSelection(from: from, to: to, registerUndo: registerUndo))
         case .tag(tag: let tag):
             edits += self.editsForTagAction(tag: tag, selection: viewModel.selection)
         case .newRow(indent: let indent, insert: let str):
@@ -119,13 +122,46 @@ class ActionProcessor {
             if viewModel.content.character(at: endOfLineIdx - 1) == "\n".utf16.first! {
                 endOfLineIdx -= 1
             }
-            edits.append(.moveSelection(from: viewModel.selection, to: NSRange(location: endOfLineIdx, length: 0)))
+            edits.append(.moveSelection(from: viewModel.selection, to: NSRange(location: endOfLineIdx, length: 0), registerUndo: true))
             edits.append(.insert(text: "\n", at: endOfLineIdx))
             edits.append(.indentLocation(location: endOfLineIdx + 1, depth: indent ?? 0))
             edits.append(.insert(text: str, at: endOfLineIdx + 1))
+        case .moveSelectionToNextUserTag:
+            if let userRange = nextUserTag(from: viewModel.selection) {
+                edits.append(.moveSelection(from: viewModel.selection, to: userRange, registerUndo: false))
+            }
+        case .moveSelectionToPrevUserTag:
+            if let userRange = prevUserTag(from: viewModel.selection) {
+                edits.append(.moveSelection(from: viewModel.selection, to: userRange, registerUndo: false))
+            }
         }
 
         return edits
+    }
+
+    private func prevUserTag(from: NSRange) -> NSRange? {
+        let range = NSRange(location: 0, length: from.lowerBound)
+        return findTag(tag: "user", in: range, isReverse: true)
+    }
+
+    private func nextUserTag(from: NSRange) -> NSRange? {
+        guard let content = viewModel?.content else { return nil }
+        let range = NSRange(location: from.upperBound, length: content.length - from.upperBound)
+        return findTag(tag: "user", in: range)
+    }
+
+    private func findTag(tag: String, in searchRange: NSRange, isReverse: Bool = false) -> NSRange? {
+        var result: NSRange?
+        viewModel?.content.enumerateSubstrings(
+            in: searchRange,
+            options: isReverse ? [.byLines, .reverse] : [.byLines]
+        ) { (subString, range, _, stop) in
+            if subString == "<\(tag)>" {
+                result = range
+                stop.pointee = true
+            }
+        }
+        return result
     }
 
     private func perform(edits: [Edit]) {
@@ -189,10 +225,12 @@ class ActionProcessor {
             try? viewModel.indent(depth: actualDepth, at: location)
             changes.append(.paragraphInvalidated(location: location))
             changes.append(.typingAttributesNeedsUpdate)
-        case .moveSelection(from: let r1, to: let r2):
-            undoManager.registerUndo(withTarget: self) { weakSelf in
-                weakSelf.perform(edit: .moveSelection(from: r2, to: r1))
-                self.onChange(self.changes)  // TODO: collect these
+        case .moveSelection(from: let r1, to: let r2, registerUndo: let registerUndo):
+            if registerUndo {
+                undoManager.registerUndo(withTarget: self) { weakSelf in
+                    weakSelf.perform(edit: .moveSelection(from: r2, to: r1, registerUndo: true))
+                    self.onChange(self.changes)  // TODO: collect these
+                }
             }
             changes.append(.selectionMoved(from: r1, to: r2))
         }
@@ -230,11 +268,11 @@ extension UndoGroupingStateMachine {
                 return .otherOperation
             case .paste(chunk: _, range: _):
                 return .otherOperation
-            case .moveSelection(from: _, to: _):
-                return .otherOperation
             case .tag(tag: _):
                 return .otherOperation
             case .newRow(indent: _, insert: _):
+                return .otherOperation
+            default:
                 return .otherOperation
             }
         }()

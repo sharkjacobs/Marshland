@@ -50,8 +50,9 @@ extension ActionProcessor {
             edits.append(.indentLocation(location: offsetSelection.location, depth: 1))
         }
         if tag.isEmpty {
+            // Move cursor between <>
             let newRange = NSRange(location: lineStart + 1, length: 0)
-            edits.append(.moveSelection(from: offsetSelection, to: newRange))
+            edits.append(.moveSelection(from: offsetSelection, to: newRange, registerUndo: true))
         }
 
         return edits

@@ -58,6 +58,18 @@ struct MarshlandApp: App {
                     }
                 }
                 .keyboardShortcut(.return, modifiers: .command)
+                Button("Go to next user tag") {
+                    Task { @MainActor in
+                        await self.viewModel?.actionProcessor?.process(.moveSelectionToNextUserTag)
+                    }
+                }
+                .keyboardShortcut(.downArrow, modifiers: .option)
+                Button("Go to previous user tag") {
+                    Task { @MainActor in
+                        await self.viewModel?.actionProcessor?.process(.moveSelectionToPrevUserTag)
+                    }
+                }
+                .keyboardShortcut(.upArrow, modifiers: .option)
             }
             
             CommandGroup(replacing: CommandGroupPlacement.appInfo) {
