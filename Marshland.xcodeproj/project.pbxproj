@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BF92B8D42E9EDF110099E54E /* SwiftOpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = BF92B8D32E9EDF110099E54E /* SwiftOpenAI */; };
 		BFA672D22E754D5B0071B665 /* STTextKitPlus in Frameworks */ = {isa = PBXBuildFile; productRef = BFA672D12E754D5B0071B665 /* STTextKitPlus */; };
 		BFCB49682E0530DA0014A250 /* SwiftAnthropic in Frameworks */ = {isa = PBXBuildFile; productRef = BFCB49672E0530DA0014A250 /* SwiftAnthropic */; };
 		BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */ = {isa = PBXBuildFile; productRef = BFD8255D2DE6BCF900914255 /* TendrilTree */; };
@@ -67,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BF92B8D42E9EDF110099E54E /* SwiftOpenAI in Frameworks */,
 				BFD8255E2DE6BCF900914255 /* TendrilTree in Frameworks */,
 				BFCB49682E0530DA0014A250 /* SwiftAnthropic in Frameworks */,
 				BFA672D22E754D5B0071B665 /* STTextKitPlus in Frameworks */,
@@ -124,6 +126,7 @@
 				BFD8255D2DE6BCF900914255 /* TendrilTree */,
 				BFCB49672E0530DA0014A250 /* SwiftAnthropic */,
 				BFA672D12E754D5B0071B665 /* STTextKitPlus */,
+				BF92B8D32E9EDF110099E54E /* SwiftOpenAI */,
 			);
 			productName = Marshland;
 			productReference = BFD824FA2DE63C4A00914255 /* Marshland.app */;
@@ -184,6 +187,7 @@
 				BFD8255C2DE6BCF900914255 /* XCLocalSwiftPackageReference "../TendrilTree" */,
 				BFCB49662E0530DA0014A250 /* XCRemoteSwiftPackageReference "SwiftAnthropic" */,
 				BFA672D02E754D5B0071B665 /* XCRemoteSwiftPackageReference "STTextKitPlus" */,
+				BF92B8D22E9EDF110099E54E /* XCRemoteSwiftPackageReference "SwiftOpenAI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BFD824FB2DE63C4A00914255 /* Products */;
@@ -517,6 +521,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		BF92B8D22E9EDF110099E54E /* XCRemoteSwiftPackageReference "SwiftOpenAI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jamesrochabrun/SwiftOpenAI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 		BFA672D02E754D5B0071B665 /* XCRemoteSwiftPackageReference "STTextKitPlus" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/krzyzanowskim/STTextKitPlus";
@@ -536,6 +548,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		BF92B8D32E9EDF110099E54E /* SwiftOpenAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF92B8D22E9EDF110099E54E /* XCRemoteSwiftPackageReference "SwiftOpenAI" */;
+			productName = SwiftOpenAI;
+		};
 		BFA672D12E754D5B0071B665 /* STTextKitPlus */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BFA672D02E754D5B0071B665 /* XCRemoteSwiftPackageReference "STTextKitPlus" */;

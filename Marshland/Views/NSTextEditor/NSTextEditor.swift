@@ -26,6 +26,7 @@ struct NSTextEditor: NSViewRepresentable {
         textView.isGrammarCheckingEnabled = true
         textView.enclosingScrollView?.focusRingType = .exterior
         textView.isAutomaticTextCompletionEnabled = false
+        textView.writingToolsBehavior = .none
         scrollView.borderType = .bezelBorder
         
         let layoutManager = textView.textContainer?.textLayoutManager
