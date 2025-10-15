@@ -24,6 +24,24 @@ extension LLMService {
         return anthropicModels.keys.contains(modelName)
     }
 
+    /// Starts a 5-minute countdown timer for Anthropic prompt caching
+    func startTimer() {
+        let endTime = Date().addingTimeInterval(300)
+        self.time = Int(endTime.timeIntervalSinceNow)
+        Task { @MainActor in
+            timer?.invalidate()
+            self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+                let timeRemaining = endTime.timeIntervalSinceNow
+                self.time = Int(timeRemaining)
+
+                if timeRemaining <= 0 {
+                    self.time = nil
+                    timer.invalidate()
+                }
+            }
+        }
+    }
+
     /// Streams a response from an Anthropic model
     /// - Parameters:
     ///   - messages: The conversation history to send to the model
@@ -106,6 +124,7 @@ extension [Message] {
 
         let modelName = UserDefaults.standard.string(forKey: "model") ?? "claude-3-7-sonnet"
         let model: SwiftAnthropic.Model = anthropicModels[modelName]!
+        let temperature = UserDefaults.standard.double(forKey: "temperature")
 
         return MessageParameter(
             model: model,
@@ -113,7 +132,7 @@ extension [Message] {
             maxTokens: 2048,
             system: .text(systemPrompt ?? ""),
             stream: true,
-            temperature: 1.0
+            temperature: temperature
         )
     }
 }

@@ -1,5 +1,18 @@
 # Claude Code Guidelines for Marshland
 
+## Development Workflow
+
+**Do NOT build, run, or test code automatically** - the user will handle this:
+
+- ❌ Do NOT run `xcodebuild` to compile the project
+- ❌ Do NOT attempt to run the application
+- ❌ Do NOT try to verify compilation errors automatically
+
+### Why:
+- The user wants to stay in the loop during the development process
+- Building and testing provides valuable feedback that the user wants to observe directly
+- The user will report any issues, errors, or test results back to you
+
 ## Documentation Style
 
 **Prefer comprehensive doc comments over inline comments** for method documentation:

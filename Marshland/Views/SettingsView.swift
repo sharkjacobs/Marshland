@@ -50,6 +50,9 @@ struct SettingsView: View {
                             Text("claude-3-opus").tag("claude-3-opus")
                             Text("claude-4-opus").tag("claude-4-opus")
                             Text("claude-4-5-sonnet").tag("claude-4-5-sonnet")
+                            Text("gpt-4o").tag("gpt-4o")
+                            Text("gpt-5").tag("gpt-5")
+                            Text("gpt-5-mini").tag("gpt-5-mini")
                         }
                     }
                     Spacer()
