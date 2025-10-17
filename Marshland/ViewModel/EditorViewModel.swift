@@ -17,7 +17,13 @@ class EditorViewModel {
     var messages = [Message]()
     var content: NSString { document.tree.string as NSString }
     var wordCount: Int = 0
-
+    var selectedCount: Int? {
+        if selection.length == 0 {
+            return nil
+        } else {
+            return document.tree.count(of: selection)
+        }
+    }
     var selection: NSRange = NSRange(location: 0, length: 0)
     
     var llmStatusMessage: String? {

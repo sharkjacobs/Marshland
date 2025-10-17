@@ -59,7 +59,11 @@ struct ContentView: View {
                     .help("Reload Messages")
                 }
             }
-            StatusBarView(wordCount: viewModel.wordCount, llmStatusMessage: viewModel.llmStatusMessage)
+            StatusBarView(
+                wordCount: viewModel.wordCount,
+                selectedCount: viewModel.selectedCount,
+                llmStatusMessage: viewModel.llmStatusMessage
+            )
         }
     }
 }

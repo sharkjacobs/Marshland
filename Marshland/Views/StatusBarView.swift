@@ -9,9 +9,10 @@ import SwiftUI
 
 struct StatusBarView: View {
     var wordCount: Int
+    var selectedCount: Int?
     var llmStatusMessage: String?
     var body: some View {
-        Text("\(wordCount)")
+        Text(selectedCount != nil ? "(\(selectedCount!)) \(wordCount)" :"\(wordCount)")
             .monospacedDigit()
             .frame(maxWidth: .infinity)
             .overlay(alignment: .trailing) {
