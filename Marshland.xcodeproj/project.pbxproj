@@ -526,7 +526,7 @@
 			repositoryURL = "https://github.com/jamesrochabrun/SwiftOpenAI";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
+				minimumVersion = 4.0.0;
 			};
 		};
 		BFA672D02E754D5B0071B665 /* XCRemoteSwiftPackageReference "STTextKitPlus" */ = {

@@ -10,8 +10,8 @@ import Foundation
 
 private let openAIModels: [String: SwiftOpenAI.Model] = [
     "gpt-4o": .gpt4o,
-    "gpt-5": .custom("gpt-5"),
-    "gpt-5-mini": .custom("gpt-5-mini")
+    "gpt-5": .gpt5,
+    "gpt-5-mini": .gpt5Mini
 ]
 
 extension LLMService {
@@ -36,7 +36,7 @@ extension LLMService {
         do {
             let stream = try await service.startStreamedChat(parameters: parameters)
             for try await result in stream {
-                if let content = result.choices.first?.delta.content {
+                if let content = result.choices?.first?.delta?.content {
                     await onChunk(content)
                 }
 //
@@ -112,6 +112,7 @@ extension [Message] {
         return ChatCompletionParameters(
             messages: messages,
             model: model,
+            reasoningEffort: .minimal,
             temperature: Swift.max(temperature, 1.0)
         )
     }
