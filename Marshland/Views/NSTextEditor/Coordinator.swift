@@ -21,6 +21,11 @@ extension NSTextEditor {
 
         /// Invalidates layout for the specified paragraph using TextKit 2 editing transactions
         private func invalidateParagraphLayout(for location: Int, in textView: NSTextView) {
+            let range = (textView.string as NSString).paragraphRange(for: NSRange(location: location, length: 0))
+            invalidateParagraphLayout(for: range, in: textView)
+        }
+        
+        func invalidateParagraphLayout(for range: NSRange, in textView: NSTextView) {
             guard let layoutManager = textView.textContainer?.textLayoutManager,
                   let contentStorage = layoutManager.textContentManager as? NSTextContentStorage
             else {
@@ -28,11 +33,11 @@ extension NSTextEditor {
             }
             
             contentStorage.performEditingTransaction {
-                let range = (textView.string as NSString).paragraphRange(for: NSRange(location: location, length: 0))
-                contentStorage.textStorage?.edited([.editedAttributes], range: range, changeInLength: 0)
+                let paragraphRange = (textView.string as NSString).paragraphRange(for: range)
+                contentStorage.textStorage?.edited([.editedAttributes], range: paragraphRange, changeInLength: 0)
 
                 if let textContentManager = layoutManager.textContentManager,
-                   let textRange = NSTextRange(range, in: textContentManager) {
+                   let textRange = NSTextRange(paragraphRange, in: textContentManager) {
                     layoutManager.invalidateLayout(for: textRange)
                 }
             }

@@ -111,7 +111,11 @@ class EditorViewModel {
             try document.tree.outdent(depth: depth, range: NSRange(location: location, length: 0))
         }
     }
-    
+
+    func childRangeOfLineAt(location: Int) -> NSRange? {
+        document.tree.childRangeOfLineAt(location: location)
+    }
+
     // MARK: - Domain-oriented edit methods
 
     func insert(text: String, at location: Int) throws {

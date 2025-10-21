@@ -51,9 +51,55 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         guard let replacementString else { return true }
 
         let sanitizedString = replacementString.replacingOccurrences(of: "\t", with: "")
+        
+        let specialTags = ["user", "comment"]
+        
+        var tagRanges: [NSRange] = []
+        (textView.string as NSString).enumerateSubstrings(
+            in: (textView.string as NSString).lineRange(for: affectedCharRange),
+            options: [.byLines]
+        ) { (subString, range, _, stop) in
+            guard let subString else { return }
+            if subString.hasPrefix("<") {
+                for tag in specialTags {
+                    if subString == "<\(tag)>" {
+                        if let childRange = self.viewModel.childRangeOfLineAt(location: range.location) {
+                            tagRanges.append(childRange)
+                        }
+                    }
+                }
+            }
+        }
+        tagRanges = NSRange.consolidated(from: tagRanges)
+        let delta = sanitizedString.utf16.count - affectedCharRange.length
+        if delta > 0 {
+            tagRanges = tagRanges.map { $0.adjustedForInsertion(insertionAt: affectedCharRange.location, length: delta)}
+        } else if delta < 0 {
+            tagRanges = tagRanges.map { $0.adjustedForDeletion(deletedRange: NSRange(location: affectedCharRange.location, length: -delta))}
+        }
 
         Task { @MainActor in
             await viewModel.actionProcessor?.process(.replaceCharacters(range: affectedCharRange, replacement: sanitizedString))
+            
+                let afterRange = (textView.string as NSString).lineRange(for: NSRange(location: affectedCharRange.location, length: sanitizedString.utf16Length))
+                (textView.string as NSString).enumerateSubstrings(
+                    in: afterRange,
+                    options: [.byLines]
+                ) { (subString, range, _, stop) in
+                    if subString?.hasPrefix("<") == true
+                    {
+                        for tag in specialTags {
+                            if subString == "<\(tag)>" {
+                                if let childRange = self.viewModel.childRangeOfLineAt(location: range.location) {
+                                    tagRanges.append(childRange)
+                                }
+                            }
+                        }
+                    }
+                }
+            for range in NSRange.consolidated(from: tagRanges) {
+                self.invalidateParagraphLayout(for: range, in: textView)
+            }
         }
 
         return false
