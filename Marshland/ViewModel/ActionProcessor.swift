@@ -155,6 +155,7 @@ class ActionProcessor {
         return findTag(tag: "user", in: range)
     }
 
+    /// Find the first (or last) instance of a tag, within the given range
     private func findTag(tag: String, in searchRange: NSRange, isReverse: Bool = false) -> NSRange? {
         var result: NSRange?
         viewModel?.content.enumerateSubstrings(

@@ -58,6 +58,7 @@ extension ActionProcessor {
         return edits
     }
 
+    // if a given selection is child of a given tag, returns the range of that tag's whole content
     private func taggedRange(_ tag: String, at selection: NSRange) -> NSRange? {
         guard let content = viewModel?.content,
             let baseIndentation = try? viewModel?.indentation(at: selection.location)
