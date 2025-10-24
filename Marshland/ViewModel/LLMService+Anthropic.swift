@@ -14,6 +14,7 @@ private let anthropicModels: [String: SwiftAnthropic.Model] = [
     "claude-3-7-sonnet": .claude37Sonnet,
     "claude-3-haiku": .claude3Haiku,
     "claude-3-5-haiku": .claude35Haiku,
+    "claude-4-5-haiku": .other("claude-haiku-4-5"),
     "claude-4-sonnet": .other("claude-sonnet-4-0"),
     "claude-4-5-sonnet": .other("claude-sonnet-4-5"),
     "claude-4-opus": .other("claude-opus-4-0"),

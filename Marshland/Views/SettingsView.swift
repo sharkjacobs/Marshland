@@ -42,13 +42,9 @@ struct SettingsView: View {
                         Spacer()
 
                         Picker("", selection: $model) {
-                            Text("claude-3-haiku").tag("claude-3-haiku")
-                            Text("claude-3-5-haiku").tag("claude-3-5-haiku")
-                            Text("claude-3-5-sonnet").tag("claude-3-5-sonnet")
+                            Text("claude-4-5-haiku").tag("claude-4-5-haiku")
                             Text("claude-3-7-sonnet").tag("claude-3-7-sonnet")
                             Text("claude-4-sonnet").tag("claude-4-sonnet")
-                            Text("claude-3-opus").tag("claude-3-opus")
-                            Text("claude-4-opus").tag("claude-4-opus")
                             Text("claude-4-5-sonnet").tag("claude-4-5-sonnet")
                             Text("gpt-4o").tag("gpt-4o")
                             Text("gpt-5").tag("gpt-5")
