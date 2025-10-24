@@ -134,7 +134,7 @@ class EditorViewModel {
         }
     }
     
-    func copiedData(for range: NSRange) -> PasteboardChunk? {
+    func copiedChunk(for range: NSRange) -> PasteboardChunk? {
         guard let baseIndentation = try? document.tree.indentation(at: range.location) else {
             return nil
         }
@@ -148,6 +148,10 @@ class EditorViewModel {
         }
         
         return PasteboardChunk(content: content.substring(with: range), indents: indents)
+    }
+    
+    func copiedString(for range: NSRange) -> String {
+        return document.tree.tabIndentedSubstring(range: range)
     }
 }
 

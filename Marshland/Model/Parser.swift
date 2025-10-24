@@ -74,6 +74,42 @@ extension TendrilTree {
 
         return messages
     }
+    
+    /**
+     Returns the raw substring for the given range, but with indentation rendered using tab characters. Each indentation level becomes one leading "\t".
+
+     - Parameter range: Optional range into the tree. If `nil`, uses the entire content.
+     - Returns: A `String` where each line is prefixed with `indentation` tabs and the line's own content is de-indented to its local base.
+     */
+    func tabIndentedSubstring(range: NSRange) -> String {
+        let lines = self.lines(in: range)
+
+        var baseIndentation = Int.max
+        for (_, _, indentation) in lines {
+            if indentation < baseIndentation { baseIndentation = indentation }
+        }
+        if baseIndentation == Int.max { baseIndentation = 0 }
+
+        var output = String()
+        for (lineContent, lineRange, lineIndentation) in lines {
+            let indentation = lineIndentation - baseIndentation
+            if indentation > 0 {
+                output.append(String(repeating: "\t", count: indentation))
+            }
+            
+            if range.location > lineRange.location {
+                let delta = range.location - lineRange.location
+                output.append(String(lineContent.dropFirst(delta)))
+            } else if lineRange.upperBound > range.upperBound {
+                let delta = lineRange.upperBound - range.upperBound
+                output.append(String(lineContent.dropLast(delta)))
+            } else {
+                output.append(lineContent)
+            }
+        }
+
+        return output
+    }
 }
 
 // MARK: - Message

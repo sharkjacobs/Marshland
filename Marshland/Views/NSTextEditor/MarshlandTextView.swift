@@ -47,16 +47,17 @@ class MarshlandTextView: NSTextView, NSTextFinderClient {
         let range = self.selectedRange()
 
         guard range.length > 0,
-            let coordinator = self.delegate as? NSTextEditor.Coordinator,
-            let chunk: PasteboardChunk = coordinator.viewModel.copiedData(for: range)
+              let coordinator = self.delegate as? NSTextEditor.Coordinator,
+              let chunk: PasteboardChunk = coordinator.viewModel.copiedChunk(for: range)
         else {
             super.copy(sender)
             return
         }
+        let string = coordinator.viewModel.copiedString(for: range)
 
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(chunk.content, forType: .string)
+        pasteboard.setString(string, forType: .string)
         if let data = try? JSONEncoder().encode(chunk) {
             pasteboard.setData(data, forType: NSPasteboard.PasteboardType("com.gdb.marshlandchunk"))
         }
