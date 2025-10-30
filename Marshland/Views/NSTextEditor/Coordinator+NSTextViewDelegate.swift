@@ -16,7 +16,7 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
     func textViewDidChangeSelection(_ notification: Notification) {
         guard let textView = notification.object as? NSTextView else { return }
         updateIndentationOfTypingAttributes(in: textView)
-        if !viewModel.isLLMResponding {
+        if !viewModel.isLLMResponding, textView.selectedRange().length == 0 {
             Task { @MainActor in
                 await Task.yield() // defer one turn of the runloop to let layout settle
                                    // Is this necessary?
