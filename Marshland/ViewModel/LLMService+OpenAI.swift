@@ -23,6 +23,10 @@ extension LLMService {
         guard let openAiKey = UserDefaults.standard.string(forKey: "openAiKey")
         else { return }
 
+        var messages = messages
+        if let continuation = messages.continuation() {
+            messages.append(continuation)
+        }
         let parameters = messages.toOpenAIParameters()
 
         let service = OpenAIServiceFactory.service(apiKey: openAiKey)
@@ -115,5 +119,15 @@ extension [Message] {
             reasoningEffort: .minimal,
             temperature: Swift.max(temperature, 1.0)
         )
+    }
+    
+    func continuation() -> Message? {
+        if !self.isEmpty, self.last!.kind == .assistant,
+           let lastLineOfText = self.last?.content.split(separator: "\n").last,
+           !lastLineOfText.isEmpty {
+            let content = "The response was interrupted, please continue exactly where you left off: '\(lastLineOfText)'"
+            return Message(content, kind: .user)
+        }
+        return nil
     }
 }
