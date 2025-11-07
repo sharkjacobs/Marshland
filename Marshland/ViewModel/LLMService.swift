@@ -29,12 +29,16 @@ final class LLMService: Sendable {
             return
         }
 
-        if isAnthropicModel(modelName) {
+        if LLMService.anthropicModels.keys.contains(modelName) {
             try? await anthropicRespond(messages) {
                 await onChunk($0)
             }
-        } else {
+        } else if LLMService.openAIModels.keys.contains(modelName) {
             try? await openAIRespond(messages) {
+                await onChunk($0)
+            }
+        } else if LLMService.openRouterModels.keys.contains(modelName) {
+            try? await openRouterRespond(messages) {
                 await onChunk($0)
             }
         }

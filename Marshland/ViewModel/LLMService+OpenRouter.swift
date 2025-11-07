@@ -1,5 +1,5 @@
 //
-//  LLMService+OpenAI.swift
+//  LLMService+OpenRouter.swift
 //  Marshland
 //
 //  Created by Graham Bing on 2025-10-14.
@@ -9,38 +9,49 @@ import SwiftOpenAI
 import Foundation
 
 extension LLMService {
-    static var openAIModels: [String: SwiftOpenAI.Model] {
+    static var openRouterModels: [String: SwiftOpenAI.Model] {
         [
-            "gpt-4o": .gpt4o,
-            "gpt-5": .gpt5,
-            "gpt-5-mini": .gpt5Mini,
+            "kimi-k2": .custom("moonshotai/kimi-k2-0905"),
+            "deepseek-chat": .custom("deepseek/deepseek-chat"),
+            "hermes-4-405b": .custom("nousresearch/hermes-4-405b"),
+            "grok-4-fast" : .custom("x-ai/grok-4-fast"),
+            "GLM-4.6" : .custom("z-ai/glm-4.6"),
+            "polaris-alpha" : .custom("openrouter/polaris-alpha")
         ]
     }
 
-    /// Streams a response from an OpenAI model
+    /// Streams a response from an OpenRouter-compatible model via SwiftOpenAI
     /// - Parameters:
     ///   - messages: The conversation history to send to the model
     ///   - onChunk: Callback invoked for each text chunk received from the streaming response
-    func openAIRespond(_ messages: [Message], onChunk: @Sendable (String) async -> Void) async throws {
-        guard let openAiKey = UserDefaults.standard.string(forKey: "openAiKey"),
-              !openAiKey.isEmpty
-        else {
+    func openRouterRespond(_ messages: [Message], onChunk: @Sendable (String) async -> Void) async throws {
+        guard let apiKey = UserDefaults.standard.string(forKey: "openRouterKey"),
+              !apiKey.isEmpty else {
             return
         }
 
-        var messages = messages
-        if let continuation = messages.continuation() {
-            messages.append(continuation)
-        }
-        guard let parameters = messages.toOpenAIParameters() else { return }
+        // Optional OpenRouter ranking headers from settings
+        let referer = UserDefaults.standard.string(forKey: "openRouterSiteURL")?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = UserDefaults.standard.string(forKey: "openRouterTitle")?.trimmingCharacters(in: .whitespacesAndNewlines)
+        var extraHeaders: [String: String] = [:]
+        if let referer, !referer.isEmpty { extraHeaders["HTTP-Referer"] = referer }
+        if let title, !title.isEmpty { extraHeaders["X-Title"] = title }
 
-        let service = OpenAIServiceFactory.service(apiKey: openAiKey)
+        var working = messages
+        if let continuation = working.continuation() {
+            working.append(continuation)
+        }
+        guard let parameters = working.toOpenRouterParameters() else { return }
+
+        let service = OpenAIServiceFactory.service(
+            apiKey: apiKey,
+            overrideBaseURL: "https://openrouter.ai",
+            proxyPath: "api",
+            extraHeaders: extraHeaders
+        )
 
         isResponding = true
-
-        defer {
-            isResponding = false
-        }
+        defer { isResponding = false }
 
         do {
             let stream = try await service.startStreamedChat(parameters: parameters)
@@ -50,14 +61,14 @@ extension LLMService {
                 }
             }
         } catch {
-            // Error is thrown to caller
             throw error
         }
     }
 }
 
 extension [Message] {
-    func toOpenAIParameters() -> ChatCompletionParameters? {
+    /// Convert app messages into ChatCompletionParameters configured for OpenRouter
+    func toOpenRouterParameters() -> ChatCompletionParameters? {
         var messages: [ChatCompletionParameters.Message] = []
 
         // Check if first message is a system message
@@ -78,9 +89,7 @@ extension [Message] {
         // Process all messages, including interleaved system messages
         for message in self {
             let content = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            if content.isEmpty {
-                continue
-            }
+            if content.isEmpty { continue }
 
             switch message.kind {
             case .system:
@@ -107,9 +116,11 @@ extension [Message] {
             }
         }
 
+        // Model and temperature are sourced from OpenRouter-specific defaults
         guard let modelName = UserDefaults.standard.string(forKey: "model"),
-              let model = LLMService.openAIModels[modelName]
+              let model = LLMService.openRouterModels[modelName]
         else {
+            print("invalid model selected")
             return nil
         }
         
@@ -121,15 +132,5 @@ extension [Message] {
             reasoningEffort: .minimal,
             temperature: Swift.max(temperature, 1.0)
         )
-    }
-    
-    func continuation() -> Message? {
-        if !self.isEmpty, self.last!.kind == .assistant,
-           let lastLineOfText = self.last?.content.split(separator: "\n").last,
-           !lastLineOfText.isEmpty {
-            let content = "The response was interrupted, please continue exactly where you left off: '\(lastLineOfText)'"
-            return Message(content, kind: .user)
-        }
-        return nil
     }
 }

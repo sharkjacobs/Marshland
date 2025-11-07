@@ -8,21 +8,14 @@
 import Foundation
 import SwiftAnthropic
 
-private let anthropicModels: [String: SwiftAnthropic.Model] = [
-    "claude-3-opus": .claude3Opus,
-    "claude-3-5-sonnet": .claude35Sonnet,
-    "claude-3-7-sonnet": .claude37Sonnet,
-    "claude-3-haiku": .claude3Haiku,
-    "claude-3-5-haiku": .claude35Haiku,
-    "claude-4-5-haiku": .other("claude-haiku-4-5"),
-    "claude-4-sonnet": .other("claude-sonnet-4-0"),
-    "claude-4-5-sonnet": .other("claude-sonnet-4-5"),
-    "claude-4-opus": .other("claude-opus-4-0"),
-]
-
 extension LLMService {
-    func isAnthropicModel(_ modelName: String) -> Bool {
-        return anthropicModels.keys.contains(modelName)
+    static var anthropicModels: [String: SwiftAnthropic.Model] {
+        [
+            "claude-3-7-sonnet": .claude37Sonnet,
+            "claude-4-5-haiku": .other("claude-haiku-4-5"),
+            "claude-4-5-sonnet": .other("claude-sonnet-4-5"),
+            "claude-4-opus": .other("claude-opus-4-0"),
+        ]
     }
 
     /// Starts a 5-minute countdown timer for Anthropic prompt caching
@@ -48,10 +41,12 @@ extension LLMService {
     ///   - messages: The conversation history to send to the model
     ///   - onChunk: Callback invoked for each text chunk received from the streaming response
     func anthropicRespond(_ messages: [Message], onChunk: @Sendable (String) async -> Void) async throws {
-        guard let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey")
-        else { return }
-
-        let parameters = messages.toAnthropicParameters()
+        guard let anthropicApiKey = UserDefaults.standard.string(forKey: "anthropicKey"),
+              !anthropicApiKey.isEmpty,
+              let parameters = messages.toAnthropicParameters()
+        else {
+            return
+        }
 
         let betaHeaders = ["prompt-caching-2024-07-31"]
         let service = AnthropicServiceFactory.service(apiKey: anthropicApiKey, betaHeaders: betaHeaders)
@@ -91,7 +86,7 @@ extension LLMService {
 }
 
 extension [Message] {
-    func toAnthropicParameters() -> MessageParameter {
+    func toAnthropicParameters() -> MessageParameter? {
         var messages: [MessageParameter.Message] = []
         var systemPrompt: String? = UserDefaults.standard.string(forKey: "systemMessage")
 
@@ -123,8 +118,12 @@ extension [Message] {
             }
         }
 
-        let modelName = UserDefaults.standard.string(forKey: "model") ?? "claude-3-7-sonnet"
-        let model: SwiftAnthropic.Model = anthropicModels[modelName]!
+        guard let modelName = UserDefaults.standard.string(forKey: "model"),
+        let model: SwiftAnthropic.Model = LLMService.anthropicModels[modelName]
+        else {
+            return nil
+        }
+        
         let temperature = UserDefaults.standard.double(forKey: "temperature")
 
         return MessageParameter(
