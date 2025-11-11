@@ -52,7 +52,42 @@ class ActionProcessor {
             undoManager.beginNewUndoGroup()
         }
 
+        // Find affected tag ranges BEFORE the change
+        var tagRangesBefore: [NSRange] = []
+        var affectedRange: NSRange? = nil
+        var replacementLength: Int = 0
+        if case .replaceCharacters(range: let range, replacement: let string) = action,
+           let viewModel = viewModel {
+            affectedRange = range
+            replacementLength = string.utf16.count
+            let lineRangeBefore = viewModel.content.lineRange(for: range)
+            tagRangesBefore = findTagRangesInArea(lineRangeBefore)
+
+            // Adjust for delta
+            let delta = replacementLength - range.length
+            if delta > 0 {
+                tagRangesBefore = tagRangesBefore.map { $0.adjustedForInsertion(insertionAt: range.location, length: delta)}
+            } else if delta < 0 {
+                tagRangesBefore = tagRangesBefore.map { $0.adjustedForDeletion(deletedRange: NSRange(location: range.location, length: -delta))}
+            }
+        }
+
         perform(edits: edits(for: action))
+
+        // Find affected tag ranges AFTER the change
+        if let affectedRange = affectedRange,
+           let viewModel = viewModel {
+            let lineRangeAfter = viewModel.content.lineRange(for: NSRange(location: affectedRange.location, length: replacementLength))
+            let tagRangesAfter = findTagRangesInArea(lineRangeAfter)
+            let allTagRanges = NSRange.consolidated(from: tagRangesBefore + tagRangesAfter)
+
+            // Emit paragraph invalidation for all affected tag ranges
+            for range in allTagRanges {
+                viewModel.content.enumerateSubstrings(in: range, options: .byLines) { _, lineRange, _, _ in
+                    self.changes.append(.paragraphInvalidated(location: lineRange.location))
+                }
+            }
+        }
 
         self.onChange(changes)
         viewModel?.documentChanged()
@@ -240,6 +275,35 @@ class ActionProcessor {
             }
             changes.append(.selectionMoved(from: r1, to: r2))
         }
+    }
+
+    /// Finds ranges containing special tags (`<user>`, `<comment>`) within the search range
+    /// - Parameter searchRange: The range to search for tags
+    /// - Returns: Array of child ranges for any tags found
+    private func findTagRangesInArea(_ searchRange: NSRange) -> [NSRange] {
+        guard let viewModel = viewModel else { return [] }
+
+        let specialTags = ["user", "comment"]
+        let content = viewModel.content
+        var tagRanges: [NSRange] = []
+
+        content.enumerateSubstrings(
+            in: searchRange,
+            options: [.byLines]
+        ) { (subString, subStringRange, _, _) in
+            guard let subString = subString else { return }
+            if subString.hasPrefix("<") {
+                for tag in specialTags {
+                    if subString == "<\(tag)>" {
+                        if let childRange = viewModel.childRangeOfLineAt(location: subStringRange.location) {
+                            tagRanges.append(childRange)
+                        }
+                    }
+                }
+            }
+        }
+
+        return tagRanges
     }
 }
 
