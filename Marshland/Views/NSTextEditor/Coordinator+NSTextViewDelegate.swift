@@ -13,17 +13,17 @@ extension NSTextEditor.Coordinator: NSTextViewDelegate {
         return newSelectedCharRange
     }
     
-    func textViewDidChangeSelection(_ notification: Notification) {
-        guard let textView = notification.object as? NSTextView else { return }
-        updateIndentationOfTypingAttributes(in: textView)
-        if !viewModel.isLLMResponding, textView.selectedRange().length == 0 {
-            Task { @MainActor in
-                await Task.yield() // defer one turn of the runloop to let layout settle
-                                   // Is this necessary?
-                textView.scrollRangeToVisible(textView.selectedRange)
-            }
-        }
-    }
+//    func textViewDidChangeSelection(_ notification: Notification) {
+//        guard let textView = notification.object as? NSTextView else { return }
+//        updateIndentationOfTypingAttributes(in: textView)
+//        if !viewModel.isLLMResponding, textView.selectedRange().length == 0 {
+//            Task { @MainActor in
+//                await Task.yield() // defer one turn of the runloop to let layout settle
+//                                   // Is this necessary?
+//                textView.scrollRangeToVisible(textView.selectedRange)
+//            }
+//        }
+//    }
 
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         let selection = textView.selectedRange()

@@ -59,6 +59,7 @@ extension NSTextEditor {
                 updateIndentationOfTypingAttributes(in: textView)
             case .selectionMoved(_, let to):
                 textView.setSelectedRange(to)
+                textView.scrollRangeToVisible(textView.selectedRange)
             }
         }
 
