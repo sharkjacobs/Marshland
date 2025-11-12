@@ -22,8 +22,6 @@ struct NSTextEditor: NSViewRepresentable {
             .font: NSFont.preferredFont(forTextStyle: .body),
             .foregroundColor: NSColor.labelColor,
         ]
-        textView.isContinuousSpellCheckingEnabled = true
-        textView.isGrammarCheckingEnabled = true
         textView.enclosingScrollView?.focusRingType = .exterior
         textView.isAutomaticTextCompletionEnabled = false
         textView.writingToolsBehavior = .none
