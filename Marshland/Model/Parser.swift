@@ -97,7 +97,12 @@ extension TendrilTree {
                 output.append(String(repeating: "\t", count: indentation))
             }
             
-            if range.location > lineRange.location {
+            if range.location > lineRange.location,
+               lineRange.upperBound > range.upperBound {
+                let d1 = range.location - lineRange.location
+                let d2 = lineRange.upperBound - range.upperBound
+                output.append(String(lineContent.dropFirst(d1).dropLast(d2)))
+            } else if range.location > lineRange.location {
                 let delta = range.location - lineRange.location
                 output.append(String(lineContent.dropFirst(delta)))
             } else if lineRange.upperBound > range.upperBound {
