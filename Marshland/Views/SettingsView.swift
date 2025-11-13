@@ -55,7 +55,7 @@ struct SettingsView: View {
                 .padding()
                 .frame(width: 400)
             }
-            Tab("System Message", systemImage: "") {
+            Tab("System Message", systemImage: "star.bubble") {
                 NavigationStack {
                     TextEditor(text: $systemMessage)
                         .padding()
