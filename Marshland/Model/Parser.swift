@@ -83,34 +83,19 @@ extension TendrilTree {
      */
     func tabIndentedSubstring(range: NSRange) -> String {
         let lines = self.lines(in: range)
-
-        var baseIndentation = Int.max
-        for (_, _, indentation) in lines {
-            if indentation < baseIndentation { baseIndentation = indentation }
-        }
-        if baseIndentation == Int.max { baseIndentation = 0 }
+        let baseIndentation = lines.map { $0.2 }.min() ?? 0
 
         var output = String()
         for (lineContent, lineRange, lineIndentation) in lines {
-            let indentation = lineIndentation - baseIndentation
-            if indentation > 0 {
-                output.append(String(repeating: "\t", count: indentation))
+            let relativeIndentation = lineIndentation - baseIndentation
+            if relativeIndentation > 0 {
+                output.append(String(repeating: "\t", count: relativeIndentation))
             }
             
-            if range.location > lineRange.location,
-               lineRange.upperBound > range.upperBound {
-                let d1 = range.location - lineRange.location
-                let d2 = lineRange.upperBound - range.upperBound
-                output.append(String(lineContent.dropFirst(d1).dropLast(d2)))
-            } else if range.location > lineRange.location {
-                let delta = range.location - lineRange.location
-                output.append(String(lineContent.dropFirst(delta)))
-            } else if lineRange.upperBound > range.upperBound {
-                let delta = lineRange.upperBound - range.upperBound
-                output.append(String(lineContent.dropLast(delta)))
-            } else {
-                output.append(lineContent)
-            }
+            let startOffset = max(0, range.location - lineRange.location) // trim first line in selection
+            let endOffset = max(0, lineRange.upperBound - range.upperBound) // trim last line in selection
+            
+            output.append(String(lineContent.dropFirst(startOffset).dropLast(endOffset)))
         }
 
         return output
